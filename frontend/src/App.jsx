@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Canvas3D from './Canvas3D';
+import TattooExtractor from './TattooExtractor';
 import { 
   Sparkles, 
-  Upload, 
   Trash2, 
   ChevronDown, 
   ChevronUp, 
@@ -157,7 +157,6 @@ export default function App() {
   // منوی پاپ‌آپ حذف با راست‌کلیک یا لانگ‌پرس
   const [contextMenu, setContextMenu] = useState(null); // { id, x, y }
   const longPressTimerRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   // تنظیمات ترنسفورم تتوها
   const [tattooTransforms, setTattooTransforms] = useState({});
@@ -365,7 +364,7 @@ export default function App() {
 
       {/* ================= مرحله ۲: ایمپورت و آپلود طرح‌ها ================= */}
       {step === 2 && (
-        <div style={{ flex: 1, padding: '40px 24px', maxWidth: '750px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, padding: '40px 24px', maxWidth: '750px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <button
               onClick={() => setStep(1)}
@@ -388,47 +387,10 @@ export default function App() {
             <div style={{ fontSize: '13px', color: '#60a5fa', fontWeight: '600' }}>مرحله ۲ از ۳: آپلود طرح‌های تتو</div>
           </div>
 
-          {/* باکس آپلود درگ اند دراپ */}
-          <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              handleFileUpload(e.dataTransfer.files);
-            }}
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              padding: '36px 20px',
-              borderRadius: '20px',
-              border: '2px dashed rgba(59, 130, 246, 0.4)',
-              background: 'rgba(59, 130, 246, 0.03)',
-              textAlign: 'center',
-              cursor: 'pointer',
-              marginBottom: '24px'
-            }}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={(e) => handleFileUpload(e.target.files)}
+          <div style={{ marginBottom: '24px' }}>
+            <TattooExtractor
+              onUseDesign={(file) => handleFileUpload([file])}
             />
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              background: 'rgba(59, 130, 246, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 14px auto',
-              color: '#3b82f6'
-            }}>
-              <Upload size={26} />
-            </div>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '6px' }}>طرح‌های تتو را اینجا بکشید یا کلیک کنید</h3>
-            <p style={{ color: '#71717a', fontSize: '13px' }}>فرمت‌های PNG، JPG و WEBP بدون پس‌زمینه پیشنهاد می‌شوند</p>
           </div>
 
           {/* پیش‌نمایش طرح‌های وارد شده */}
