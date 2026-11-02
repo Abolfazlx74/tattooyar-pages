@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Canvas3D from './Canvas3D';
 import TattooExtractor from './TattooExtractor';
-import { 
-  Sparkles, 
-  Trash2, 
-  ChevronDown, 
-  ChevronUp, 
-  ChevronLeft, 
-  ArrowRight, 
+import {
+  Sparkles,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ArrowRight,
   Image as ImageIcon,
   Sliders,
   CheckCircle2,
@@ -24,8 +24,6 @@ const BODY_PARTS = [
   { id: 'full_body', name: 'بدن کامل', path: '/models/body_parts/full_body.glb', icon: '🧍', ready: false },
 ];
 
-// کامپوننت اسلایدر فیزیکی با بالون معلق
-// کامپوننت اسلایدر فیزیکی کاملاً هماهنگ با جهت استاندارد
 function PhysicsSlider({ label, value, min, max, unit = '', onChange }) {
   const [isDragging, setIsDragging] = useState(false);
   const [tilt, setTilt] = useState(0);
@@ -40,7 +38,6 @@ function PhysicsSlider({ label, value, min, max, unit = '', onChange }) {
     if (!isDragging) return;
     if (lastXRef.current !== null) {
       const deltaX = e.clientX - lastXRef.current;
-      // انحراف جهت بادکنک به سمت مخالف حرکت دست
       const calculatedTilt = Math.max(-25, Math.min(25, -deltaX * 3));
       setTilt(calculatedTilt);
     }
@@ -68,7 +65,6 @@ function PhysicsSlider({ label, value, min, max, unit = '', onChange }) {
 
   return (
     <div style={{ marginBottom: '18px', userSelect: 'none' }}>
-      {/* تیتر و عدد بالا */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -81,10 +77,7 @@ function PhysicsSlider({ label, value, min, max, unit = '', onChange }) {
         <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>{value}{unit}</span>
       </div>
 
-      {/* محفظه اسلایدر - کاملاً چپ‌به‌راست برای هماهنگی ۱۰۰ درصدی */}
       <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center', direction: 'ltr' }}>
-        
-        {/* بادکنک فیزیکی معلق دقیقاً بالای دایره اسلایدر */}
         {isDragging && (
           <div
             style={{
@@ -107,7 +100,6 @@ function PhysicsSlider({ label, value, min, max, unit = '', onChange }) {
             }}
           >
             {value}{unit}
-            {/* نوک پیکان بادکنک */}
             <div style={{
               position: 'absolute',
               top: '100%',
@@ -150,15 +142,12 @@ export default function App() {
   const [selectedPart, setSelectedPart] = useState(BODY_PARTS[0]);
   const [tattoos, setTattoos] = useState([]);
   const [selectedTattooId, setSelectedTattooId] = useState(null);
+  const [isPlacingMode, setIsPlacingMode] = useState(false);
 
-  // استیت‌های آکاردئون سایدبار
-  const [openSection, setOpenSection] = useState('tattoos'); // 'tattoos' یا 'settings'
-
-  // منوی پاپ‌آپ حذف با راست‌کلیک یا لانگ‌پرس
-  const [contextMenu, setContextMenu] = useState(null); // { id, x, y }
+  const [openSection, setOpenSection] = useState('tattoos');
+  const [contextMenu, setContextMenu] = useState(null);
   const longPressTimerRef = useRef(null);
 
-  // تنظیمات ترنسفورم تتوها
   const [tattooTransforms, setTattooTransforms] = useState({});
 
   const activeTattoo = tattoos.find((t) => t.id === selectedTattooId) || null;
@@ -180,7 +169,15 @@ export default function App() {
     }));
   };
 
-  // آپلود عکس‌ها
+  const handlePlaceTattoo = (point, normal) => {
+    if (!selectedTattooId) return;
+    setTattoos((prev) =>
+      prev.map((t) =>
+        t.id === selectedTattooId ? { ...t, position: point, normal: normal } : t
+      )
+    );
+  };
+
   const handleFileUpload = (files) => {
     const newItems = Array.from(files).filter(f => f.type.startsWith('image/')).map((file) => ({
       id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -205,13 +202,11 @@ export default function App() {
     setContextMenu(null);
   };
 
-  // مدیریت راست‌کلیک پی‌سی
   const handleContextMenu = (e, id) => {
     e.preventDefault();
     setContextMenu({ id, x: e.clientX, y: e.clientY });
   };
 
-  // مدیریت لانگ‌پرس برای لمسی
   const handleTouchStart = (id, e) => {
     const touch = e.touches[0];
     longPressTimerRef.current = setTimeout(() => {
@@ -226,7 +221,7 @@ export default function App() {
   };
 
   return (
-    <div 
+    <div
       className="notranslate"
       translate="no"
       style={{
@@ -241,7 +236,6 @@ export default function App() {
       }}
       onClick={() => setContextMenu(null)}
     >
-      {/* منوی کلیک راست / شناور حذف */}
       {contextMenu && (
         <div
           style={{
@@ -393,7 +387,6 @@ export default function App() {
             />
           </div>
 
-          {/* پیش‌نمایش طرح‌های وارد شده */}
           <div style={{ flex: 1, overflowY: 'auto', marginBottom: '24px' }}>
             <div style={{ fontSize: '13px', color: '#a1a1aa', marginBottom: '12px' }}>
               طرح‌های وارد شده ({tattoos.length}):
@@ -446,7 +439,6 @@ export default function App() {
             )}
           </div>
 
-          {/* دکمه ورود به محیط کار */}
           <button
             disabled={tattoos.length === 0}
             onClick={() => setStep(3)}
@@ -474,7 +466,7 @@ export default function App() {
       {/* ================= مرحله ۳: ابزار و استودیوی سه‌بعدی ================= */}
       {step === 3 && (
         <div style={{ flex: 1, display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
-          {/* سمت چپ: کادر مستطیلی سه‌بعدی (دقیقاً دو سوم صفحه = 66.66%) */}
+          {/* سمت چپ: کادر سه‌بعدی */}
           <div style={{ width: '66.666%', height: '100%', position: 'relative', borderLeft: '1px solid #1f1f23' }}>
             <div style={{
               position: 'absolute',
@@ -483,7 +475,7 @@ export default function App() {
               zIndex: 10,
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '10px',
               background: 'rgba(18, 18, 20, 0.75)',
               backdropFilter: 'blur(10px)',
               padding: '8px 14px',
@@ -500,12 +492,36 @@ export default function App() {
               </button>
               <span style={{ color: '#3f3f46' }}>|</span>
               <span style={{ color: '#d4d4d8' }}>عضو: {selectedPart.name}</span>
+              <span style={{ color: '#3f3f46' }}>|</span>
+
+              <button
+                onClick={() => setIsPlacingMode(!isPlacingMode)}
+                style={{
+                  background: isPlacingMode ? '#2563eb' : 'rgba(255,255,255,0.08)',
+                  color: isPlacingMode ? '#fff' : '#a1a1aa',
+                  border: '1px solid ' + (isPlacingMode ? '#3b82f6' : 'rgba(255,255,255,0.1)'),
+                  padding: '5px 10px',
+                  borderRadius: '7px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {isPlacingMode ? '🎯 لمس پوست (فعال)' : '🔄 چرخش ۳بعدی'}
+              </button>
             </div>
 
-            <Canvas3D modelPath={selectedPart.path} />
+            <Canvas3D
+              modelPath={selectedPart.path}
+              tattoos={tattoos}
+              tattooTransforms={tattooTransforms}
+              isPlacingMode={isPlacingMode}
+              onPlaceTattoo={handlePlaceTattoo}
+            />
           </div>
 
-          {/* سمت راست: سایدبار عمودی ابزارها (یک سوم صفحه = 33.33%) */}
+          {/* سمت راست: سایدبار ابزارها */}
           <div style={{
             width: '33.333%',
             height: '100%',
@@ -515,10 +531,9 @@ export default function App() {
             justifyContent: 'space-between',
             borderRight: '1px solid #1f1f23'
           }}>
-            {/* بخش بالایی: منوهای بازشو / آکاردئونی */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-              
-              {/* منوی بازشو ۱: طرح‌های تتو */}
+
+              {/* منوی ۱: طرح‌های تتو */}
               <div style={{
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid rgba(255, 255, 255, 0.06)',
@@ -600,7 +615,7 @@ export default function App() {
                 )}
               </div>
 
-              {/* منوی بازشو ۲: تنظیمات طرح انتخاب شده */}
+              {/* منوی ۲: تنظیمات طرح انتخاب شده */}
               <div style={{
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid rgba(255, 255, 255, 0.06)',
@@ -631,8 +646,8 @@ export default function App() {
                       <>
                         <PhysicsSlider
                           label="بزرگ‌نمایی (Scale)"
-                          min={1}
-                          max={100}
+                          min={10}
+                          max={250}
                           value={currentTransform.scale}
                           unit="%"
                           onChange={(v) => updateTransform('scale', v)}
@@ -686,7 +701,7 @@ export default function App() {
 
             </div>
 
-            {/* پایین‌ترین بخش سایدبار: پیش‌نمایش طرح فعال */}
+            {/* بخش پایین سایدبار */}
             <div style={{
               padding: '16px',
               backgroundColor: '#0c0c0e',
