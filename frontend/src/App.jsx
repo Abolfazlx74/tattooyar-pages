@@ -153,8 +153,6 @@ export default function App() {
   const activeTattoo = tattoos.find((t) => t.id === selectedTattooId) || null;
   const currentTransform = (selectedTattooId && tattooTransforms[selectedTattooId]) || {
     scale: 35,
-    rotX: 0,
-    rotY: 0,
     rotZ: 0
   };
 
@@ -163,7 +161,7 @@ export default function App() {
     setTattooTransforms((prev) => ({
       ...prev,
       [selectedTattooId]: {
-        ...currentTransform,
+        ...(prev[selectedTattooId] || { scale: 35, rotZ: 0 }),
         [key]: val
       }
     }));
@@ -516,8 +514,10 @@ export default function App() {
               modelPath={selectedPart.path}
               tattoos={tattoos}
               tattooTransforms={tattooTransforms}
+              selectedTattooId={selectedTattooId}
               isPlacingMode={isPlacingMode}
               onPlaceTattoo={handlePlaceTattoo}
+              onUpdateTransform={updateTransform}
             />
           </div>
 
@@ -658,30 +658,8 @@ export default function App() {
                           paddingTop: '16px',
                           borderTop: '1px solid rgba(255,255,255,0.06)'
                         }}>
-                          <div style={{ fontSize: '13px', fontWeight: '700', color: '#f4f4f5', marginBottom: '14px' }}>
-                            چرخش (Rotation)
-                          </div>
-
                           <PhysicsSlider
-                            label="محور X"
-                            min={0}
-                            max={360}
-                            value={currentTransform.rotX}
-                            unit="°"
-                            onChange={(v) => updateTransform('rotX', v)}
-                          />
-
-                          <PhysicsSlider
-                            label="محور Y"
-                            min={0}
-                            max={360}
-                            value={currentTransform.rotY}
-                            unit="°"
-                            onChange={(v) => updateTransform('rotY', v)}
-                          />
-
-                          <PhysicsSlider
-                            label="محور Z"
+                            label="چرخش (Rotation)"
                             min={0}
                             max={360}
                             value={currentTransform.rotZ}
