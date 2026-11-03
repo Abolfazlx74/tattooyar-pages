@@ -5,7 +5,7 @@ import * as THREE from 'three';
 
 const MAX_TATTOOS = 4;
 
-// شیدر پروجکشن چندگانه با پشتیبانی از اسلات شابلون زنده (Ghost Preview)
+// شیدر اختصاصی استوانه‌ای جهت رفع کامل کشیدگی و پرش در لبه‌های عضو
 const MultiTattooShader = {
   uniforms: {
     uBaseColor: { value: new THREE.Color('#d4d4d8') },
@@ -17,7 +17,7 @@ const MultiTattooShader = {
     uBitangents: { value: [new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0)] },
     uScales: { value: [0.5, 0.5, 0.5, 0.5] },
 
-    // اسلات پیش‌نمایش ماوس
+    // پیش‌نمایش زنده شابلون
     uPreviewMap: { value: null },
     uHasPreview: { value: 0.0 },
     uPreviewPosition: { value: new THREE.Vector3() },
@@ -57,41 +57,60 @@ const MultiTattooShader = {
     varying vec3 vWorldPosition;
     varying vec3 vWorldNormal;
 
+    // نگاشت پیوسته قوسی بر مبنای بردار مماس عضو (Wrap Projection)
+    vec2 calculateWrappedUV(vec3 worldPos, vec3 centerPos, vec3 n, vec3 t, vec3 b, float scale) {
+      vec3 diff = worldPos - centerPos;
+      
+      // مختصات روی جهت محور عمودی عضو (طول دست)
+      float yDist = dot(diff, b);
+      
+      // مختصات روی افق و زاویه انحنای دور دست
+      float tDist = dot(diff, t);
+      float nDist = dot(diff, n);
+      
+      // تخمین زاویه دور استوانه
+      float arcLength = atan(tDist, max(0.01, scale * 0.45 + nDist)) * (scale * 0.45);
+      
+      float u = arcLength / scale + 0.5;
+      float v = yDist / scale + 0.5;
+      return vec2(u, v);
+    }
+
     void main() {
       vec3 finalSkin = uBaseColor;
 
-      // ۱. رندر تتوهای ثبت‌شده روی پوست
+      // ۱. تتوهای نهایی
       for (int i = 0; i < 4; i++) {
         if (uHasTattoo[i] > 0.5) {
-          vec3 diff = vWorldPosition - uPositions[i];
           float dotNorm = dot(vWorldNormal, uNormals[i]);
+          vec2 uv = calculateWrappedUV(vWorldPosition, uPositions[i], uNormals[i], uTangents[i], uBitangents[i], uScales[i]);
 
-          float x = dot(diff, uTangents[i]) / uScales[i] + 0.5;
-          float y = dot(diff, uBitangents[i]) / uScales[i] + 0.5;
-
-          if (x >= 0.0 && x <= 1.0 && y >= 0.0 && y <= 1.0 && dotNorm > 0.05) {
+          if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0 && dotNorm > -0.15) {
             vec4 col = vec4(0.0);
-            if (i == 0) col = texture2D(uTattooMaps[0], vec2(x, y));
-            else if (i == 1) col = texture2D(uTattooMaps[1], vec2(x, y));
-            else if (i == 2) col = texture2D(uTattooMaps[2], vec2(x, y));
-            else if (i == 3) col = texture2D(uTattooMaps[3], vec2(x, y));
+            if (i == 0) col = texture2D(uTattooMaps[0], uv);
+            else if (i == 1) col = texture2D(uTattooMaps[1], uv);
+            else if (i == 2) col = texture2D(uTattooMaps[2], uv);
+            else if (i == 3) col = texture2D(uTattooMaps[3], uv);
 
-            finalSkin = mix(finalSkin, col.rgb, col.a);
+            float edgeFade = smoothstep(0.0, 0.06, uv.x) * smoothstep(1.0, 0.94, uv.x) *
+                             smoothstep(0.0, 0.06, uv.y) * smoothstep(1.0, 0.94, uv.y);
+            float blend = col.a * edgeFade * smoothstep(-0.2, 0.15, dotNorm);
+            finalSkin = mix(finalSkin, col.rgb, blend);
           }
         }
       }
 
-      // ۲. رندر شابلون زنده پیش‌نمایش (با شفافیت ۳۵ درصد)
+      // ۲. پیش‌نمایش زنده شابلون
       if (uHasPreview > 0.5) {
-        vec3 diffP = vWorldPosition - uPreviewPosition;
         float dotNormP = dot(vWorldNormal, uPreviewNormal);
+        vec2 pUv = calculateWrappedUV(vWorldPosition, uPreviewPosition, uPreviewNormal, uPreviewTangent, uPreviewBitangent, uPreviewScale);
 
-        float px = dot(diffP, uPreviewTangent) / uPreviewScale + 0.5;
-        float py = dot(diffP, uPreviewBitangent) / uPreviewScale + 0.5;
-
-        if (px >= 0.0 && px <= 1.0 && py >= 0.0 && py <= 1.0 && dotNormP > 0.05) {
-          vec4 prevCol = texture2D(uPreviewMap, vec2(px, py));
-          finalSkin = mix(finalSkin, prevCol.rgb, prevCol.a * 0.7);
+        if (pUv.x >= 0.0 && pUv.x <= 1.0 && pUv.y >= 0.0 && pUv.y <= 1.0 && dotNormP > -0.15) {
+          vec4 prevCol = texture2D(uPreviewMap, pUv);
+          float edgeFadeP = smoothstep(0.0, 0.06, pUv.x) * smoothstep(1.0, 0.94, pUv.x) *
+                            smoothstep(0.0, 0.06, pUv.y) * smoothstep(1.0, 0.94, pUv.y);
+          float previewBlend = prevCol.a * 0.75 * edgeFadeP * smoothstep(-0.2, 0.15, dotNormP);
+          finalSkin = mix(finalSkin, prevCol.rgb, previewBlend);
         }
       }
 
@@ -101,6 +120,31 @@ const MultiTattooShader = {
     }
   `
 };
+
+// پایه ریاضی قفل شده روی امتداد ساعد برای حذف دائمی پرش چرخش
+function getStableLimbBasis(normal, rotZDeg = 0) {
+  const n = normal.clone().normalize();
+  
+  // محور عضو معمولاً در امتداد Y است؛ بردار مماس طوری ساخته می‌شود که سر تتو همیشه رو به بالا بماند
+  const limbAxis = new THREE.Vector3(0, 1, 0);
+  let tangent = new THREE.Vector3().crossVectors(limbAxis, n);
+  
+  if (tangent.lengthSq() < 0.001) {
+    tangent = new THREE.Vector3(1, 0, 0);
+  } else {
+    tangent.normalize();
+  }
+  
+  const bitangent = new THREE.Vector3().crossVectors(n, tangent).normalize();
+
+  if (rotZDeg !== 0) {
+    const rotRad = THREE.MathUtils.degToRad(rotZDeg);
+    tangent.applyAxisAngle(n, rotRad);
+    bitangent.applyAxisAngle(n, rotRad);
+  }
+
+  return { normal: n, tangent, bitangent };
+}
 
 function BodyModel({
   modelPath,
@@ -113,11 +157,8 @@ function BodyModel({
 }) {
   const { scene } = useGLTF(modelPath);
   const [textures, setTextures] = useState({});
-
-  // استیت موقت شابلون متحرک ماوس
   const [hoverData, setHoverData] = useState(null);
 
-  // لود تکسچرها
   useEffect(() => {
     const loader = new THREE.TextureLoader();
     tattoos.forEach((t) => {
@@ -138,7 +179,7 @@ function BodyModel({
     });
   }, []);
 
-  // همگام‌سازی تتوهای ثبت‌شده با شیدر
+  // اعمال تتوهای ثابت
   useEffect(() => {
     if (!customMaterial) return;
 
@@ -146,22 +187,15 @@ function BodyModel({
       const t = tattoos[i];
       if (t && t.position && t.normal && textures[t.id]) {
         const trans = tattooTransforms[t.id] || { scale: 60, rotZ: 0 };
-        const normal = new THREE.Vector3(...t.normal).normalize();
-        const rotZ = THREE.MathUtils.degToRad(trans.rotZ || 0);
-
-        const up = Math.abs(normal.y) > 0.9 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
-        const tangent = new THREE.Vector3().crossVectors(up, normal).normalize();
-        const bitangent = new THREE.Vector3().crossVectors(normal, tangent).normalize();
-
-        tangent.applyAxisAngle(normal, rotZ);
-        bitangent.applyAxisAngle(normal, rotZ);
+        const normalVec = new THREE.Vector3(...t.normal).normalize();
+        const basis = getStableLimbBasis(normalVec, trans.rotZ || 0);
 
         customMaterial.uniforms.uTattooMaps.value[i] = textures[t.id];
         customMaterial.uniforms.uHasTattoo.value[i] = 1.0;
         customMaterial.uniforms.uPositions.value[i].set(...t.position);
-        customMaterial.uniforms.uNormals.value[i].copy(normal);
-        customMaterial.uniforms.uTangents.value[i].copy(tangent);
-        customMaterial.uniforms.uBitangents.value[i].copy(bitangent);
+        customMaterial.uniforms.uNormals.value[i].copy(basis.normal);
+        customMaterial.uniforms.uTangents.value[i].copy(basis.tangent);
+        customMaterial.uniforms.uBitangents.value[i].copy(basis.bitangent);
         customMaterial.uniforms.uScales.value[i] = (trans.scale / 100) * 1.6;
       } else {
         customMaterial.uniforms.uHasTattoo.value[i] = 0.0;
@@ -169,28 +203,20 @@ function BodyModel({
     }
   }, [customMaterial, tattoos, tattooTransforms, textures]);
 
-  // همگام‌سازی شابلون پیش‌نمایش زنده با شیدر
+  // اعمال پیش‌نمایش زنده با پایه باثبات
   useEffect(() => {
     if (!customMaterial) return;
 
     if (isPlacingMode && hoverData && selectedTattooId && textures[selectedTattooId]) {
       const trans = tattooTransforms[selectedTattooId] || { scale: 35, rotZ: 0 };
-      const normal = hoverData.normal.clone().normalize();
-      const rotZ = THREE.MathUtils.degToRad(trans.rotZ || 0);
-
-      const up = Math.abs(normal.y) > 0.9 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
-      const tangent = new THREE.Vector3().crossVectors(up, normal).normalize();
-      const bitangent = new THREE.Vector3().crossVectors(normal, tangent).normalize();
-
-      tangent.applyAxisAngle(normal, rotZ);
-      bitangent.applyAxisAngle(normal, rotZ);
+      const basis = getStableLimbBasis(hoverData.normal, trans.rotZ || 0);
 
       customMaterial.uniforms.uPreviewMap.value = textures[selectedTattooId];
       customMaterial.uniforms.uHasPreview.value = 1.0;
       customMaterial.uniforms.uPreviewPosition.value.copy(hoverData.point);
-      customMaterial.uniforms.uPreviewNormal.value.copy(normal);
-      customMaterial.uniforms.uPreviewTangent.value.copy(tangent);
-      customMaterial.uniforms.uPreviewBitangent.value.copy(bitangent);
+      customMaterial.uniforms.uPreviewNormal.value.copy(basis.normal);
+      customMaterial.uniforms.uPreviewTangent.value.copy(basis.tangent);
+      customMaterial.uniforms.uPreviewBitangent.value.copy(basis.bitangent);
       customMaterial.uniforms.uPreviewScale.value = (trans.scale / 100) * 1.6;
     } else {
       customMaterial.uniforms.uHasPreview.value = 0.0;
@@ -205,12 +231,13 @@ function BodyModel({
     });
   }, [scene, customMaterial]);
 
-  // شورت‌کات‌های درگ اسکرول (Middle Click Drag + Ctrl / Shift)
+  // شورت‌کات‌های فقط در حالت لمس پوست
   const dragStartRef = useRef(null);
 
   useEffect(() => {
+    if (!isPlacingMode) return;
+
     const handleGlobalPointerDown = (e) => {
-      // کلیک اسکرول (button === 1) یا راست‌کلیک کمکی با Ctrl/Shift
       if (e.button === 1 || ((e.ctrlKey || e.shiftKey) && e.button === 2)) {
         dragStartRef.current = {
           x: e.clientX,
@@ -231,11 +258,9 @@ function BodyModel({
       const deltaY = dragStartRef.current.y - e.clientY;
 
       if (dragStartRef.current.ctrl) {
-        // Ctrl + درگ اسکرول = تغییر مقیاس (Scale)
         const newScale = Math.max(10, Math.min(250, Math.round(dragStartRef.current.initScale + deltaY * 0.8)));
         onUpdateTransform('scale', newScale);
       } else if (dragStartRef.current.shift) {
-        // Shift + درگ اسکرول = چرخش (Rotation Z)
         let newRot = Math.round((dragStartRef.current.initRot + deltaX * 1.2) % 360);
         if (newRot < 0) newRot += 360;
         onUpdateTransform('rotZ', newRot);
@@ -257,9 +282,8 @@ function BodyModel({
       window.removeEventListener('pointermove', handleGlobalPointerMove);
       window.removeEventListener('pointerup', handleGlobalPointerUp);
     };
-  }, [selectedTattooId, tattooTransforms, onUpdateTransform]);
+  }, [isPlacingMode, selectedTattooId, tattooTransforms, onUpdateTransform]);
 
-  // تعقیب ماوس روی پوست برای شابلون
   const handlePointerMove = (e) => {
     if (!isPlacingMode) return;
     e.stopPropagation();
@@ -276,7 +300,6 @@ function BodyModel({
     setHoverData(null);
   };
 
-  // ثبت تتو با کلیک چپ
   const handlePointerDown = (e) => {
     if (!isPlacingMode || e.button !== 0 || !onPlaceTattoo) return;
     e.stopPropagation();
