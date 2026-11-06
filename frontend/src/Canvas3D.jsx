@@ -5,127 +5,8 @@ import * as THREE from 'three';
 
 const MAX_TATTOOS = 4;
 
-// شیدر اختصاصی استوانه‌ای جهت رفع کامل کشیدگی و پرش در لبه‌های عضو
-const MultiTattooShader = {
-  uniforms: {
-    uBaseColor: { value: new THREE.Color('#d4d4d8') },
-    uTattooMaps: { value: [null, null, null, null] },
-    uHasTattoo: { value: [0.0, 0.0, 0.0, 0.0] },
-    uPositions: { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
-    uNormals: { value: [new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 1)] },
-    uTangents: { value: [new THREE.Vector3(1, 0, 0), new THREE.Vector3(1, 0, 0), new THREE.Vector3(1, 0, 0), new THREE.Vector3(1, 0, 0)] },
-    uBitangents: { value: [new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0)] },
-    uScales: { value: [0.5, 0.5, 0.5, 0.5] },
-
-    // پیش‌نمایش زنده شابلون
-    uPreviewMap: { value: null },
-    uHasPreview: { value: 0.0 },
-    uPreviewPosition: { value: new THREE.Vector3() },
-    uPreviewNormal: { value: new THREE.Vector3(0, 0, 1) },
-    uPreviewTangent: { value: new THREE.Vector3(1, 0, 0) },
-    uPreviewBitangent: { value: new THREE.Vector3(0, 1, 0) },
-    uPreviewScale: { value: 0.5 },
-  },
-  vertexShader: `
-    varying vec3 vWorldPosition;
-    varying vec3 vWorldNormal;
-    void main() {
-      vec4 worldPos = modelMatrix * vec4(position, 1.0);
-      vWorldPosition = worldPos.xyz;
-      vWorldNormal = normalize(mat3(modelMatrix) * normal);
-      gl_Position = projectionMatrix * viewMatrix * worldPos;
-    }
-  `,
-  fragmentShader: `
-    uniform vec3 uBaseColor;
-    uniform sampler2D uTattooMaps[4];
-    uniform float uHasTattoo[4];
-    uniform vec3 uPositions[4];
-    uniform vec3 uNormals[4];
-    uniform vec3 uTangents[4];
-    uniform vec3 uBitangents[4];
-    uniform float uScales[4];
-
-    uniform sampler2D uPreviewMap;
-    uniform float uHasPreview;
-    uniform vec3 uPreviewPosition;
-    uniform vec3 uPreviewNormal;
-    uniform vec3 uPreviewTangent;
-    uniform vec3 uPreviewBitangent;
-    uniform float uPreviewScale;
-
-    varying vec3 vWorldPosition;
-    varying vec3 vWorldNormal;
-
-    // نگاشت پیوسته قوسی بر مبنای بردار مماس عضو (Wrap Projection)
-    vec2 calculateWrappedUV(vec3 worldPos, vec3 centerPos, vec3 n, vec3 t, vec3 b, float scale) {
-      vec3 diff = worldPos - centerPos;
-      
-      // مختصات روی جهت محور عمودی عضو (طول دست)
-      float yDist = dot(diff, b);
-      
-      // مختصات روی افق و زاویه انحنای دور دست
-      float tDist = dot(diff, t);
-      float nDist = dot(diff, n);
-      
-      // تخمین زاویه دور استوانه
-      float arcLength = atan(tDist, max(0.01, scale * 0.45 + nDist)) * (scale * 0.45);
-      
-      float u = arcLength / scale + 0.5;
-      float v = yDist / scale + 0.5;
-      return vec2(u, v);
-    }
-
-    void main() {
-      vec3 finalSkin = uBaseColor;
-
-      // ۱. تتوهای نهایی
-      for (int i = 0; i < 4; i++) {
-        if (uHasTattoo[i] > 0.5) {
-          float dotNorm = dot(vWorldNormal, uNormals[i]);
-          vec2 uv = calculateWrappedUV(vWorldPosition, uPositions[i], uNormals[i], uTangents[i], uBitangents[i], uScales[i]);
-
-          if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0 && dotNorm > -0.15) {
-            vec4 col = vec4(0.0);
-            if (i == 0) col = texture2D(uTattooMaps[0], uv);
-            else if (i == 1) col = texture2D(uTattooMaps[1], uv);
-            else if (i == 2) col = texture2D(uTattooMaps[2], uv);
-            else if (i == 3) col = texture2D(uTattooMaps[3], uv);
-
-            float edgeFade = smoothstep(0.0, 0.06, uv.x) * smoothstep(1.0, 0.94, uv.x) *
-                             smoothstep(0.0, 0.06, uv.y) * smoothstep(1.0, 0.94, uv.y);
-            float blend = col.a * edgeFade * smoothstep(-0.2, 0.15, dotNorm);
-            finalSkin = mix(finalSkin, col.rgb, blend);
-          }
-        }
-      }
-
-      // ۲. پیش‌نمایش زنده شابلون
-      if (uHasPreview > 0.5) {
-        float dotNormP = dot(vWorldNormal, uPreviewNormal);
-        vec2 pUv = calculateWrappedUV(vWorldPosition, uPreviewPosition, uPreviewNormal, uPreviewTangent, uPreviewBitangent, uPreviewScale);
-
-        if (pUv.x >= 0.0 && pUv.x <= 1.0 && pUv.y >= 0.0 && pUv.y <= 1.0 && dotNormP > -0.15) {
-          vec4 prevCol = texture2D(uPreviewMap, pUv);
-          float edgeFadeP = smoothstep(0.0, 0.06, pUv.x) * smoothstep(1.0, 0.94, pUv.x) *
-                            smoothstep(0.0, 0.06, pUv.y) * smoothstep(1.0, 0.94, pUv.y);
-          float previewBlend = prevCol.a * 0.75 * edgeFadeP * smoothstep(-0.2, 0.15, dotNormP);
-          finalSkin = mix(finalSkin, prevCol.rgb, previewBlend);
-        }
-      }
-
-      vec3 lightDir = normalize(vec3(1.0, 1.5, 1.0));
-      float diffLight = max(dot(vWorldNormal, lightDir), 0.35);
-      gl_FragColor = vec4(finalSkin * diffLight, 1.0);
-    }
-  `
-};
-
-// پایه ریاضی قفل شده روی امتداد ساعد برای حذف دائمی پرش چرخش
 function getStableLimbBasis(normal, rotZDeg = 0) {
   const n = normal.clone().normalize();
-  
-  // محور عضو معمولاً در امتداد Y است؛ بردار مماس طوری ساخته می‌شود که سر تتو همیشه رو به بالا بماند
   const limbAxis = new THREE.Vector3(0, 1, 0);
   let tangent = new THREE.Vector3().crossVectors(limbAxis, n);
   
@@ -146,12 +27,196 @@ function getStableLimbBasis(normal, rotZDeg = 0) {
   return { normal: n, tangent, bitangent };
 }
 
+const StableTattooShader = {
+  uniforms: {
+    uBaseColor: { value: new THREE.Color('#d4d4d8') },
+    uTattooMaps: { value: [null, null, null, null] },
+    uHasTattoo: { value: [0.0, 0.0, 0.0, 0.0] },
+    uIsUVMode: { value: [0.0, 0.0, 0.0, 0.0] },
+
+    // حالت پروجکشن استوانه‌ای پایدار
+    uPositions: { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
+    uNormals: { value: [new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 1)] },
+    uTangents: { value: [new THREE.Vector3(1, 0, 0), new THREE.Vector3(1, 0, 0), new THREE.Vector3(1, 0, 0), new THREE.Vector3(1, 0, 0)] },
+    uBitangents: { value: [new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0)] },
+    uScalesProj: { value: [0.5, 0.5, 0.5, 0.5] },
+
+    // حالت UV چندکاناله
+    uCentersUV: { value: [new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2()] },
+    uScalesUV: { value: [0.35, 0.35, 0.35, 0.35] },
+    uRotationsUV: { value: [0.0, 0.0, 0.0, 0.0] },
+    uUVChannels: { value: [0.0, 0.0, 0.0, 0.0] },
+
+    // پیش‌نمایش شابلون
+    uPreviewMap: { value: null },
+    uHasPreview: { value: 0.0 },
+    uPreviewPosition: { value: new THREE.Vector3() },
+    uPreviewNormal: { value: new THREE.Vector3(0, 0, 1) },
+    uPreviewTangent: { value: new THREE.Vector3(1, 0, 0) },
+    uPreviewBitangent: { value: new THREE.Vector3(0, 1, 0) },
+    uPreviewScaleProj: { value: 0.5 },
+
+    // جهت نور گردشی اسلایدر
+    uLightDir: { value: new THREE.Vector3(1.0, 1.5, 1.0) }
+  },
+  vertexShader: `
+    attribute vec2 uvSet0;
+    attribute vec2 uvSet1;
+    attribute vec2 uvSet2;
+    attribute vec2 uvSet3;
+
+    varying vec3 vWorldPosition;
+    varying vec3 vWorldNormal;
+    varying vec2 vUv0;
+    varying vec2 vUv1;
+    varying vec2 vUv2;
+    varying vec2 vUv3;
+
+    void main() {
+      vec4 worldPos = modelMatrix * vec4(position, 1.0);
+      vWorldPosition = worldPos.xyz;
+      vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+
+      vUv0 = uvSet0;
+      vUv1 = uvSet1;
+      vUv2 = uvSet2;
+      vUv3 = uvSet3;
+
+      gl_Position = projectionMatrix * viewMatrix * worldPos;
+    }
+  `,
+  fragmentShader: `
+    uniform vec3 uBaseColor;
+    uniform sampler2D uTattooMaps[4];
+    uniform float uHasTattoo[4];
+    uniform float uIsUVMode[4];
+
+    uniform vec3 uPositions[4];
+    uniform vec3 uNormals[4];
+    uniform vec3 uTangents[4];
+    uniform vec3 uBitangents[4];
+    uniform float uScalesProj[4];
+
+    uniform vec2 uCentersUV[4];
+    uniform float uScalesUV[4];
+    uniform float uRotationsUV[4];
+    uniform float uUVChannels[4];
+
+    uniform sampler2D uPreviewMap;
+    uniform float uHasPreview;
+    uniform vec3 uPreviewPosition;
+    uniform vec3 uPreviewNormal;
+    uniform vec3 uPreviewTangent;
+    uniform vec3 uPreviewBitangent;
+    uniform float uPreviewScaleProj;
+
+    uniform vec3 uLightDir;
+
+    varying vec3 vWorldPosition;
+    varying vec3 vWorldNormal;
+    varying vec2 vUv0;
+    varying vec2 vUv1;
+    varying vec2 vUv2;
+    varying vec2 vUv3;
+
+    vec2 calculateWrappedUV(vec3 worldPos, vec3 centerPos, vec3 n, vec3 t, vec3 b, float scale) {
+      vec3 diff = worldPos - centerPos;
+      float yDist = dot(diff, b);
+      float tDist = dot(diff, t);
+      float nDist = dot(diff, n);
+      float arcLength = atan(tDist, max(0.01, scale * 0.45 + nDist)) * (scale * 0.45);
+      float u = arcLength / scale + 0.5;
+      float v = yDist / scale + 0.5;
+      return vec2(u, v);
+    }
+
+    vec2 getActiveUV(float channel) {
+      if (channel > 2.5) return vUv3;
+      if (channel > 1.5) return vUv2;
+      if (channel > 0.5) return vUv1;
+      return vUv0;
+    }
+
+    vec2 transformUV(vec2 currentUV, vec2 centerUV, float scale, float rotDeg) {
+      vec2 delta = currentUV - centerUV;
+      float rad = radians(rotDeg);
+      float c = cos(rad);
+      float s = sin(rad);
+      vec2 rotated = vec2(delta.x * c - delta.y * s, delta.x * s + delta.y * c);
+      return (rotated / max(0.001, scale)) + vec2(0.5);
+    }
+
+    void main() {
+      vec3 finalSkin = uBaseColor;
+
+      for (int i = 0; i < 4; i++) {
+        if (uHasTattoo[i] > 0.5) {
+          vec2 uv = vec2(-1.0);
+          float alphaFactor = 1.0;
+
+          if (uIsUVMode[i] > 0.5) {
+            vec2 activeUv = getActiveUV(uUVChannels[i]);
+            uv = transformUV(activeUv, uCentersUV[i], uScalesUV[i], uRotationsUV[i]);
+            alphaFactor = smoothstep(0.0, 0.02, uv.x) * smoothstep(1.0, 0.98, uv.x) *
+                          smoothstep(0.0, 0.02, uv.y) * smoothstep(1.0, 0.98, uv.y);
+          } else {
+            float dotNorm = dot(vWorldNormal, uNormals[i]);
+            if (dotNorm > -0.15) {
+              uv = calculateWrappedUV(vWorldPosition, uPositions[i], uNormals[i], uTangents[i], uBitangents[i], uScalesProj[i]);
+              float edgeFade = smoothstep(0.0, 0.06, uv.x) * smoothstep(1.0, 0.94, uv.x) *
+                               smoothstep(0.0, 0.06, uv.y) * smoothstep(1.0, 0.94, uv.y);
+              alphaFactor = edgeFade * smoothstep(-0.2, 0.15, dotNorm);
+            }
+          }
+
+          if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
+            vec4 col = vec4(0.0);
+            if (i == 0) col = texture2D(uTattooMaps[0], uv);
+            else if (i == 1) col = texture2D(uTattooMaps[1], uv);
+            else if (i == 2) col = texture2D(uTattooMaps[2], uv);
+            else if (i == 3) col = texture2D(uTattooMaps[3], uv);
+
+            finalSkin = mix(finalSkin, col.rgb, col.a * alphaFactor);
+          }
+        }
+      }
+
+      if (uHasPreview > 0.5) {
+        float dotNormP = dot(vWorldNormal, uPreviewNormal);
+        if (dotNormP > -0.15) {
+          vec2 pUv = calculateWrappedUV(vWorldPosition, uPreviewPosition, uPreviewNormal, uPreviewTangent, uPreviewBitangent, uPreviewScaleProj);
+          if (pUv.x >= 0.0 && pUv.x <= 1.0 && pUv.y >= 0.0 && pUv.y <= 1.0) {
+            vec4 prevCol = texture2D(uPreviewMap, pUv);
+            float edgeFadeP = smoothstep(0.0, 0.06, pUv.x) * smoothstep(1.0, 0.94, pUv.x) *
+                              smoothstep(0.0, 0.06, pUv.y) * smoothstep(1.0, 0.94, pUv.y);
+            float pAlpha = edgeFadeP * smoothstep(-0.2, 0.15, dotNormP);
+            finalSkin = mix(finalSkin, prevCol.rgb, prevCol.a * 0.75 * pAlpha);
+          }
+        }
+      }
+
+      // نورپردازی استودیو با سایه‌روشن طبیعی و قابلیت گردش ۳۶۰ درجه
+      vec3 norm = normalize(vWorldNormal);
+      vec3 light = normalize(uLightDir);
+      float diff = max(dot(norm, light), 0.0);
+      float fill = max(dot(norm, -light * vec3(1.0, 0.0, 1.0)), 0.0) * 0.25;
+      float ambient = 0.42;
+
+      float totalLighting = ambient + diff * 0.7 + fill;
+      gl_FragColor = vec4(finalSkin * totalLighting, 1.0);
+    }
+  `
+};
+
 function BodyModel({
   modelPath,
   tattoos,
   tattooTransforms,
   selectedTattooId,
   isPlacingMode,
+  isUVMode,
+  activeUVZone,
+  lightAngle,
   onPlaceTattoo,
   onUpdateTransform
 }) {
@@ -173,37 +238,75 @@ function BodyModel({
 
   const customMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
-      uniforms: THREE.UniformsUtils.clone(MultiTattooShader.uniforms),
-      vertexShader: MultiTattooShader.vertexShader,
-      fragmentShader: MultiTattooShader.fragmentShader,
+      uniforms: THREE.UniformsUtils.clone(StableTattooShader.uniforms),
+      vertexShader: StableTattooShader.vertexShader,
+      fragmentShader: StableTattooShader.fragmentShader,
     });
   }, []);
 
-  // اعمال تتوهای ثابت
+  // آپدیت بردار زاویه نور بر اساس اسلایدر
+  useEffect(() => {
+    if (!customMaterial) return;
+    const rad = ((lightAngle || 0) * Math.PI) / 180;
+    const lx = Math.sin(rad) * 3.0;
+    const lz = Math.cos(rad) * 3.0;
+    customMaterial.uniforms.uLightDir.value.set(lx, 2.2, lz).normalize();
+  }, [customMaterial, lightAngle]);
+
+  useEffect(() => {
+    scene.traverse((child) => {
+      if (child.isMesh) {
+        const geom = child.geometry;
+        const s0 = geom.attributes.uv;
+        const s1 = geom.attributes.uv1 || geom.attributes.uv2 || s0;
+        const s2 = geom.attributes.uv2 || geom.attributes.uv3 || geom.attributes._uv2 || s1;
+        const s3 = geom.attributes.uv3 || geom.attributes.uv4 || geom.attributes._uv3 || s2;
+
+        geom.setAttribute('uvSet0', s0);
+        geom.setAttribute('uvSet1', s1);
+        geom.setAttribute('uvSet2', s2);
+        geom.setAttribute('uvSet3', s3);
+
+        child.material = customMaterial;
+      }
+    });
+  }, [scene, customMaterial]);
+
   useEffect(() => {
     if (!customMaterial) return;
 
     for (let i = 0; i < MAX_TATTOOS; i++) {
       const t = tattoos[i];
-      if (t && t.position && t.normal && textures[t.id]) {
-        const trans = tattooTransforms[t.id] || { scale: 60, rotZ: 0 };
-        const normalVec = new THREE.Vector3(...t.normal).normalize();
-        const basis = getStableLimbBasis(normalVec, trans.rotZ || 0);
+      const isPlaced = t && ((t.isUVMode && t.hitUV) || (!t.isUVMode && t.position));
 
+      if (isPlaced && textures[t.id]) {
+        const trans = tattooTransforms[t.id] || { scale: 35, rotZ: 0 };
         customMaterial.uniforms.uTattooMaps.value[i] = textures[t.id];
         customMaterial.uniforms.uHasTattoo.value[i] = 1.0;
-        customMaterial.uniforms.uPositions.value[i].set(...t.position);
-        customMaterial.uniforms.uNormals.value[i].copy(basis.normal);
-        customMaterial.uniforms.uTangents.value[i].copy(basis.tangent);
-        customMaterial.uniforms.uBitangents.value[i].copy(basis.bitangent);
-        customMaterial.uniforms.uScales.value[i] = (trans.scale / 100) * 1.6;
+
+        if (t.isUVMode && t.hitUV) {
+          customMaterial.uniforms.uIsUVMode.value[i] = 1.0;
+          customMaterial.uniforms.uCentersUV.value[i].set(t.hitUV.x, t.hitUV.y);
+          customMaterial.uniforms.uScalesUV.value[i] = (trans.scale / 100) * 0.85;
+          customMaterial.uniforms.uRotationsUV.value[i] = trans.rotZ || 0.0;
+          customMaterial.uniforms.uUVChannels.value[i] = t.uvChannel ?? 0.0;
+        } else if (t.position && t.normal) {
+          customMaterial.uniforms.uIsUVMode.value[i] = 0.0;
+          const normalVec = new THREE.Vector3(...t.normal).normalize();
+          const basis = getStableLimbBasis(normalVec, trans.rotZ || 0);
+
+          customMaterial.uniforms.uPositions.value[i].set(...t.position);
+          customMaterial.uniforms.uNormals.value[i].copy(basis.normal);
+          customMaterial.uniforms.uTangents.value[i].copy(basis.tangent);
+          customMaterial.uniforms.uBitangents.value[i].copy(basis.bitangent);
+          customMaterial.uniforms.uScalesProj.value[i] = (trans.scale / 100) * 0.85;
+        }
       } else {
         customMaterial.uniforms.uHasTattoo.value[i] = 0.0;
       }
     }
   }, [customMaterial, tattoos, tattooTransforms, textures]);
 
-  // اعمال پیش‌نمایش زنده با پایه باثبات
   useEffect(() => {
     if (!customMaterial) return;
 
@@ -217,21 +320,12 @@ function BodyModel({
       customMaterial.uniforms.uPreviewNormal.value.copy(basis.normal);
       customMaterial.uniforms.uPreviewTangent.value.copy(basis.tangent);
       customMaterial.uniforms.uPreviewBitangent.value.copy(basis.bitangent);
-      customMaterial.uniforms.uPreviewScale.value = (trans.scale / 100) * 1.6;
+      customMaterial.uniforms.uPreviewScaleProj.value = (trans.scale / 100) * 0.85;
     } else {
       customMaterial.uniforms.uHasPreview.value = 0.0;
     }
   }, [customMaterial, isPlacingMode, hoverData, selectedTattooId, tattooTransforms, textures]);
 
-  useEffect(() => {
-    scene.traverse((child) => {
-      if (child.isMesh) {
-        child.material = customMaterial;
-      }
-    });
-  }, [scene, customMaterial]);
-
-  // شورت‌کات‌های فقط در حالت لمس پوست
   const dragStartRef = useRef(null);
 
   useEffect(() => {
@@ -309,10 +403,52 @@ function BodyModel({
     const normalMatrix = new THREE.Matrix3().getNormalMatrix(e.object.matrixWorld);
     const worldNormal = hitNormal.applyMatrix3(normalMatrix).normalize();
 
-    onPlaceTattoo(
-      [hitPoint.x, hitPoint.y, hitPoint.z],
-      [worldNormal.x, worldNormal.y, worldNormal.z]
-    );
+    let finalUV = new THREE.Vector2();
+    let channel = activeUVZone;
+    const geom = e.object.geometry;
+
+    let attr = null;
+    if (channel === 0) attr = geom.attributes.uvSet0;
+    else if (channel === 1) attr = geom.attributes.uvSet1;
+    else if (channel === 2) attr = geom.attributes.uvSet2;
+    else if (channel === 3) attr = geom.attributes.uvSet3;
+
+    if (attr && e.face) {
+      const uvA = new THREE.Vector2(attr.getX(e.face.a), attr.getY(e.face.a));
+      const uvB = new THREE.Vector2(attr.getX(e.face.b), attr.getY(e.face.b));
+      const uvC = new THREE.Vector2(attr.getX(e.face.c), attr.getY(e.face.c));
+
+      const posA = new THREE.Vector3().fromBufferAttribute(geom.attributes.position, e.face.a);
+      const posB = new THREE.Vector3().fromBufferAttribute(geom.attributes.position, e.face.b);
+      const posC = new THREE.Vector3().fromBufferAttribute(geom.attributes.position, e.face.c);
+
+      const invMat = e.object.matrixWorld.clone().invert();
+      const localHit = hitPoint.clone().applyMatrix4(invMat);
+
+      const v0 = posB.clone().sub(posA);
+      const v1 = posC.clone().sub(posA);
+      const v2 = localHit.clone().sub(posA);
+
+      const d00 = v0.dot(v0);
+      const d01 = v0.dot(v1);
+      const d11 = v1.dot(v1);
+      const d20 = v2.dot(v0);
+      const d21 = v2.dot(v1);
+
+      const denom = d00 * d11 - d01 * d01;
+      if (Math.abs(denom) > 1e-6) {
+        const v = (d11 * d20 - d01 * d21) / denom;
+        const w = (d00 * d21 - d01 * d20) / denom;
+        const u = 1.0 - v - w;
+
+        finalUV.x = u * uvA.x + v * uvB.x + w * uvC.x;
+        finalUV.y = u * uvA.y + v * uvB.y + w * uvC.y;
+      } else {
+        finalUV.copy(uvA);
+      }
+    }
+
+    onPlaceTattoo(hitPoint, worldNormal, finalUV, channel, isUVMode);
   };
 
   return (
@@ -331,6 +467,9 @@ export default function Canvas3D({
   tattooTransforms,
   selectedTattooId,
   isPlacingMode,
+  isUVMode,
+  activeUVZone,
+  lightAngle = 45,
   onPlaceTattoo,
   onUpdateTransform
 }) {
@@ -341,10 +480,6 @@ export default function Canvas3D({
         camera={{ position: [0, 0, 2.4], fov: 45 }}
         style={{ background: 'transparent' }}
       >
-        <ambientLight intensity={1.2} />
-        <directionalLight position={[5, 10, 5]} intensity={1.5} />
-        <directionalLight position={[-5, 5, -5]} intensity={0.8} />
-
         <Suspense fallback={null}>
           <Center>
             <BodyModel
@@ -353,6 +488,9 @@ export default function Canvas3D({
               tattooTransforms={tattooTransforms}
               selectedTattooId={selectedTattooId}
               isPlacingMode={isPlacingMode}
+              isUVMode={isUVMode}
+              activeUVZone={activeUVZone}
+              lightAngle={lightAngle}
               onPlaceTattoo={onPlaceTattoo}
               onUpdateTransform={onUpdateTransform}
             />

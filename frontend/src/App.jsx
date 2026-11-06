@@ -11,17 +11,74 @@ import {
   Image as ImageIcon,
   Sliders,
   CheckCircle2,
-  X
+  X,
+  Layers,
+  HelpCircle,
+  Sun
 } from 'lucide-react';
 
 const BODY_PARTS = [
-  { id: 'arm_right', name: 'دست راست', path: '/models/body_parts/arm_right.glb', icon: '💪', ready: true },
-  { id: 'arm_left', name: 'دست چپ', path: '/models/body_parts/arm_left.glb', icon: '💪', ready: false },
-  { id: 'leg_right', name: 'پای راست', path: '/models/body_parts/leg_right.glb', icon: '🦵', ready: false },
-  { id: 'leg_left', name: 'پای چپ', path: '/models/body_parts/leg_left.glb', icon: '🦵', ready: false },
-  { id: 'head', name: 'سر', path: '/models/body_parts/head.glb', icon: '👤', ready: false },
-  { id: 'torso', name: 'نیم‌تنه بالا', path: '/models/body_parts/torso.glb', icon: '👕', ready: false },
-  { id: 'full_body', name: 'بدن کامل', path: '/models/body_parts/full_body.glb', icon: '🧍', ready: false },
+  {
+    id: 'torso',
+    name: 'نیم‌تنه بالا',
+    path: '/models/body_parts/torso.glb',
+    icon: '👕',
+    zones: [
+      { id: 0, label: 'سرشانه / سینه (FT)' },
+      { id: 1, label: 'پهلوی چپ مدل (FL)' },
+      { id: 2, label: 'پهلوی راست مدل (FR)' },
+    ]
+  },
+  {
+    id: 'arm_right',
+    name: 'دست راست',
+    path: '/models/body_parts/arm_right.glb',
+    icon: '💪',
+    zones: [
+      { id: 0, label: 'دید از چپ مدل (FL)' },
+      { id: 1, label: 'دید از راست مدل (FR)' },
+      { id: 2, label: 'دید از بالا (FT)' },
+      { id: 3, label: 'دید از پایین (FB)' },
+    ]
+  },
+  {
+    id: 'arm_left',
+    name: 'دست چپ',
+    path: '/models/body_parts/arm_left.glb',
+    icon: '💪',
+    zones: [
+      { id: 0, label: 'دید از چپ مدل (FL)' },
+      { id: 1, label: 'دید از راست مدل (FR)' },
+      { id: 2, label: 'دید از بالا (FT)' },
+      { id: 3, label: 'دید از پایین (FB)' },
+    ]
+  },
+  {
+    id: 'leg_right',
+    name: 'پای راست',
+    path: '/models/body_parts/leg_right.glb',
+    icon: '🦵',
+    zones: [
+      { id: 0, label: 'دید از راست مدل (FR)' },
+      { id: 1, label: 'ساق پا / رو‌به‌رو (FF)' },
+      { id: 2, label: 'دید از چپ مدل (FL)' },
+      { id: 3, label: 'پشت پا / دوقلو (FB)' },
+    ]
+  },
+  {
+    id: 'leg_left',
+    name: 'پای چپ',
+    path: '/models/body_parts/leg_left.glb',
+    icon: '🦵',
+    zones: [
+      { id: 0, label: 'دید از راست مدل (FR)' },
+      { id: 1, label: 'ساق پا / رو‌به‌رو (FF)' },
+      { id: 2, label: 'دید از چپ مدل (FL)' },
+      { id: 3, label: 'پشت پا / دوقلو (FB)' },
+    ]
+  },
+  { id: 'head', name: 'سر', path: '/models/body_parts/head.glb', icon: '👤', zones: [] },
+  { id: 'full_body', name: 'بدن کامل', path: '/models/body_parts/full_body.glb', icon: '🧍', zones: [] },
 ];
 
 function PhysicsSlider({ label, value, min, max, unit = '', onChange }) {
@@ -144,11 +201,26 @@ export default function App() {
   const [selectedTattooId, setSelectedTattooId] = useState(null);
   const [isPlacingMode, setIsPlacingMode] = useState(false);
 
+  const [isUVMode, setIsUVMode] = useState(false);
+  const [activeUVZone, setActiveUVZone] = useState(0);
+  const [showGuide, setShowGuide] = useState(false);
+
+  // زاویه چرخش نور استودیو دور مدل (۰ تا ۳۶۰ درجه)
+  const [lightAngle, setLightAngle] = useState(45);
+
   const [openSection, setOpenSection] = useState('tattoos');
   const [contextMenu, setContextMenu] = useState(null);
   const longPressTimerRef = useRef(null);
 
   const [tattooTransforms, setTattooTransforms] = useState({});
+
+  useEffect(() => {
+    if (selectedPart && selectedPart.zones && selectedPart.zones.length > 0) {
+      setActiveUVZone(selectedPart.zones[0].id);
+    } else {
+      setActiveUVZone(0);
+    }
+  }, [selectedPart]);
 
   const activeTattoo = tattoos.find((t) => t.id === selectedTattooId) || null;
   const currentTransform = (selectedTattooId && tattooTransforms[selectedTattooId]) || {
@@ -167,11 +239,20 @@ export default function App() {
     }));
   };
 
-  const handlePlaceTattoo = (point, normal) => {
+  const handlePlaceTattoo = (point, normal, uv, channel, modeUsed) => {
     if (!selectedTattooId) return;
     setTattoos((prev) =>
       prev.map((t) =>
-        t.id === selectedTattooId ? { ...t, position: point, normal: normal } : t
+        t.id === selectedTattooId
+          ? {
+              ...t,
+              position: [point.x, point.y, point.z],
+              normal: [normal.x, normal.y, normal.z],
+              hitUV: uv,
+              uvChannel: channel,
+              isUVMode: modeUsed
+            }
+          : t
       )
     );
   };
@@ -180,7 +261,9 @@ export default function App() {
     const newItems = Array.from(files).filter(f => f.type.startsWith('image/')).map((file) => ({
       id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: file.name,
-      url: URL.createObjectURL(file)
+      url: URL.createObjectURL(file),
+      position: null,
+      hitUV: null
     }));
     if (newItems.length > 0) {
       setTattoos((prev) => [...prev, ...newItems]);
@@ -272,7 +355,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ================= مرحله ۱: انتخاب عضو بدن ================= */}
+      {/* ================= مرحله ۱ ================= */}
       {step === 1 && (
         <div style={{ flex: 1, padding: '40px 24px', overflowY: 'auto', maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
           <div style={{ textAlign: 'center', marginBottom: '35px' }}>
@@ -335,16 +418,9 @@ export default function App() {
                     {part.icon}
                   </div>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#fff', margin: 0 }}>
-                        {part.name}
-                      </h3>
-                      {part.ready && (
-                        <span style={{ fontSize: '10px', background: '#10b981', color: '#fff', padding: '2px 6px', borderRadius: '4px' }}>
-                          آماده
-                        </span>
-                      )}
-                    </div>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#fff', margin: 0 }}>
+                      {part.name}
+                    </h3>
                   </div>
                 </div>
                 <ChevronLeft size={18} color="#71717a" />
@@ -354,7 +430,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ================= مرحله ۲: ایمپورت و آپلود طرح‌ها ================= */}
+      {/* ================= مرحله ۲ ================= */}
       {step === 2 && (
         <div style={{ flex: 1, padding: '40px 24px', maxWidth: '750px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -402,12 +478,21 @@ export default function App() {
                       position: 'relative',
                       aspectRatio: '1/1',
                       borderRadius: '12px',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: selectedTattooId === t.id ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
+                      backgroundImage: `
+                        linear-gradient(45deg, #e4e4e7 25%, transparent 25%),
+                        linear-gradient(-45deg, #e4e4e7 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, #e4e4e7 75%),
+                        linear-gradient(-45deg, transparent 75%, #e4e4e7 75%)
+                      `,
+                      backgroundSize: '12px 12px',
+                      backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0px',
+                      backgroundColor: '#ffffff',
+                      border: selectedTattooId === t.id ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
                       padding: '6px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      overflow: 'hidden'
                     }}
                   >
                     <img src={t.url} alt={t.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
@@ -415,8 +500,8 @@ export default function App() {
                       onClick={(e) => handleDeleteTattoo(t.id, e)}
                       style={{
                         position: 'absolute',
-                        top: '-6px',
-                        left: '-6px',
+                        top: '4px',
+                        left: '4px',
                         background: '#ef4444',
                         color: '#fff',
                         border: 'none',
@@ -426,7 +511,8 @@ export default function App() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        zIndex: 5
                       }}
                     >
                       <X size={12} />
@@ -461,11 +547,11 @@ export default function App() {
         </div>
       )}
 
-      {/* ================= مرحله ۳: ابزار و استودیوی سه‌بعدی ================= */}
+      {/* ================= مرحله ۳ ================= */}
       {step === 3 && (
         <div style={{ flex: 1, display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
-          {/* سمت چپ: کادر سه‌بعدی */}
           <div style={{ width: '66.666%', height: '100%', position: 'relative', borderLeft: '1px solid #1f1f23' }}>
+            
             <div style={{
               position: 'absolute',
               top: '16px',
@@ -473,10 +559,10 @@ export default function App() {
               zIndex: 10,
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              background: 'rgba(18, 18, 20, 0.75)',
-              backdropFilter: 'blur(10px)',
-              padding: '8px 14px',
+              gap: '8px',
+              background: 'rgba(18, 18, 20, 0.88)',
+              backdropFilter: 'blur(12px)',
+              padding: '8px 12px',
               borderRadius: '10px',
               border: '1px solid rgba(255,255,255,0.08)',
               fontSize: '13px'
@@ -489,7 +575,60 @@ export default function App() {
                 <span>افزودن طرح</span>
               </button>
               <span style={{ color: '#3f3f46' }}>|</span>
-              <span style={{ color: '#d4d4d8' }}>عضو: {selectedPart.name}</span>
+
+              <button
+                onClick={() => setIsUVMode(!isUVMode)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: isUVMode ? 'rgba(147, 51, 234, 0.25)' : 'rgba(255,255,255,0.06)',
+                  color: isUVMode ? '#c084fc' : '#a1a1aa',
+                  border: '1px solid ' + (isUVMode ? '#9333ea' : 'rgba(255,255,255,0.1)'),
+                  padding: '5px 10px',
+                  borderRadius: '7px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Layers size={14} />
+                <span>{isUVMode ? 'طرح عریض (فعال)' : 'طرح استاندارد'}</span>
+              </button>
+
+              {isUVMode && selectedPart.zones && selectedPart.zones.length > 0 && (
+                <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.3)', padding: '2px', borderRadius: '6px' }}>
+                  {selectedPart.zones.map((zone) => (
+                    <button
+                      key={zone.id}
+                      onClick={() => setActiveUVZone(zone.id)}
+                      style={{
+                        background: activeUVZone === zone.id ? '#9333ea' : 'transparent',
+                        color: activeUVZone === zone.id ? '#fff' : '#a1a1aa',
+                        border: 'none',
+                        borderRadius: '5px',
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        fontWeight: activeUVZone === zone.id ? '700' : '400',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {zone.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <button
+                onClick={() => setShowGuide(!showGuide)}
+                style={{ background: 'none', border: 'none', color: showGuide ? '#38bdf8' : '#71717a', cursor: 'pointer' }}
+                title="راهنما"
+              >
+                <HelpCircle size={16} />
+              </button>
+
               <span style={{ color: '#3f3f46' }}>|</span>
 
               <button
@@ -503,12 +642,33 @@ export default function App() {
                   cursor: 'pointer',
                   fontSize: '12px',
                   fontWeight: 'bold',
-                  transition: 'all 0.2s'
                 }}
               >
                 {isPlacingMode ? '🎯 لمس پوست (فعال)' : '🔄 چرخش ۳بعدی'}
               </button>
             </div>
+
+            {showGuide && (
+              <div style={{
+                position: 'absolute',
+                top: '64px',
+                right: '16px',
+                zIndex: 10,
+                width: '300px',
+                backgroundColor: 'rgba(24, 24, 27, 0.95)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(147, 51, 234, 0.3)',
+                borderRadius: '10px',
+                padding: '12px',
+                fontSize: '12px',
+                lineHeight: '1.6',
+                color: '#d4d4d8',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+              }}>
+                <div style={{ fontWeight: '700', color: '#c084fc', marginBottom: '4px' }}>راهنمای انتخاب موضع:</div>
+                اگر طرح بسیار عریض است و روی انحنای عضو کش می‌آید، حالت «طرح عریض» را روشن کرده و زاویه مورد نظر عضو را انتخاب کنید تا طرح با چرخش طبیعی و بدون دفرمه شدن قرار گیرد.
+              </div>
+            )}
 
             <Canvas3D
               modelPath={selectedPart.path}
@@ -516,12 +676,14 @@ export default function App() {
               tattooTransforms={tattooTransforms}
               selectedTattooId={selectedTattooId}
               isPlacingMode={isPlacingMode}
+              isUVMode={isUVMode}
+              activeUVZone={activeUVZone}
+              lightAngle={lightAngle}
               onPlaceTattoo={handlePlaceTattoo}
               onUpdateTransform={updateTransform}
             />
           </div>
 
-          {/* سمت راست: سایدبار ابزارها */}
           <div style={{
             width: '33.333%',
             height: '100%',
@@ -533,7 +695,7 @@ export default function App() {
           }}>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
 
-              {/* منوی ۱: طرح‌های تتو */}
+              {/* ۱. منوی طرح‌های تتو */}
               <div style={{
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid rgba(255, 255, 255, 0.06)',
@@ -581,17 +743,25 @@ export default function App() {
                             style={{
                               aspectRatio: '1/1',
                               borderRadius: '12px',
-                              background: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                              backdropFilter: 'blur(10px)',
-                              border: isSelected ? '2px solid #3b82f6' : '1px solid rgba(255, 255, 255, 0.08)',
-                              boxShadow: isSelected ? '0 0 14px rgba(59, 130, 246, 0.3)' : 'none',
-                              padding: '8px',
+                              backgroundImage: `
+                                linear-gradient(45deg, #e4e4e7 25%, transparent 25%),
+                                linear-gradient(-45deg, #e4e4e7 25%, transparent 25%),
+                                linear-gradient(45deg, transparent 75%, #e4e4e7 75%),
+                                linear-gradient(-45deg, transparent 75%, #e4e4e7 75%)
+                              `,
+                              backgroundSize: '10px 10px',
+                              backgroundPosition: '0 0, 0 5px, 5px -5px, -5px 0px',
+                              backgroundColor: '#ffffff',
+                              border: isSelected ? '2px solid #3b82f6' : '1px solid rgba(255, 255, 255, 0.2)',
+                              boxShadow: isSelected ? '0 0 14px rgba(59, 130, 246, 0.4)' : 'none',
+                              padding: '6px',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               cursor: 'pointer',
                               position: 'relative',
-                              transition: 'all 0.15s ease'
+                              transition: 'all 0.15s ease',
+                              overflow: 'hidden'
                             }}
                           >
                             <img
@@ -608,18 +778,16 @@ export default function App() {
                         );
                       })}
                     </div>
-                    <p style={{ fontSize: '11px', color: '#52525b', marginTop: '10px', textAlign: 'center' }}>
-                      راست‌کلیک (در پی‌سی) یا لمس طولانی (در گوشی) برای حذف طرح
-                    </p>
                   </div>
                 )}
               </div>
 
-              {/* منوی ۲: تنظیمات طرح انتخاب شده */}
+              {/* ۲. منوی تنظیمات طرح انتخاب شده */}
               <div style={{
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid rgba(255, 255, 255, 0.06)',
                 borderRadius: '14px',
+                marginBottom: '12px',
                 overflow: 'hidden'
               }}>
                 <div
@@ -670,16 +838,54 @@ export default function App() {
                       </>
                     ) : (
                       <div style={{ textAlign: 'center', color: '#71717a', fontSize: '12px', padding: '16px 0' }}>
-                        ابتدا یک طرح را از منوی بالا انتخاب کنید.
+                        طرحی انتخاب نشده است.
                       </div>
                     )}
                   </div>
                 )}
               </div>
 
+              {/* ۳. منوی نورپردازی استودیو (کنترل ۳۶۰ درجه زاویه نور دور مدل) */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                borderRadius: '14px',
+                overflow: 'hidden'
+              }}>
+                <div
+                  onClick={() => setOpenSection(openSection === 'lighting' ? '' : 'lighting')}
+                  style={{
+                    padding: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    background: 'rgba(255,255,255,0.03)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '700' }}>
+                    <Sun size={17} color="#f59e0b" />
+                    <span>نورپردازی استودیو</span>
+                  </div>
+                  {openSection === 'lighting' ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </div>
+
+                {openSection === 'lighting' && (
+                  <div style={{ padding: '16px' }}>
+                    <PhysicsSlider
+                      label="زاویه تابش نور (Light Orbit)"
+                      min={0}
+                      max={360}
+                      value={lightAngle}
+                      unit="°"
+                      onChange={(v) => setLightAngle(v)}
+                    />
+                  </div>
+                )}
+              </div>
+
             </div>
 
-            {/* بخش پایین سایدبار */}
             <div style={{
               padding: '16px',
               backgroundColor: '#0c0c0e',
@@ -690,25 +896,36 @@ export default function App() {
               gap: '12px'
             }}>
               <div>
-                <div style={{ fontSize: '11px', color: '#71717a' }}>وضعیت:</div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#f4f4f5' }}>طرح انتخاب شده</div>
+                <div style={{ fontSize: '11px', color: '#71717a' }}>سیستم فعال:</div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#f4f4f5' }}>
+                  {isUVMode ? 'موضع تطبیقی (انحنای عریض)' : 'پروجکشن استاندارد'}
+                </div>
               </div>
 
               <div style={{
                 width: '52px',
                 height: '52px',
                 borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backgroundImage: `
+                  linear-gradient(45deg, #e4e4e7 25%, transparent 25%),
+                  linear-gradient(-45deg, #e4e4e7 25%, transparent 25%),
+                  linear-gradient(45deg, transparent 75%, #e4e4e7 75%),
+                  linear-gradient(-45deg, transparent 75%, #e4e4e7 75%)
+                `,
+                backgroundSize: '8px 8px',
+                backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
+                backgroundColor: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '4px'
+                padding: '4px',
+                overflow: 'hidden'
               }}>
                 {activeTattoo ? (
                   <img src={activeTattoo.url} alt="طرح فعال" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                 ) : (
-                  <span style={{ fontSize: '10px', color: '#52525b' }}>خالی</span>
+                  <span style={{ fontSize: '10px', color: '#71717a' }}>خالی</span>
                 )}
               </div>
             </div>
