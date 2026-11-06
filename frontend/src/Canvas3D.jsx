@@ -287,8 +287,9 @@ function BodyModel({
         if (t.isUVMode && t.hitUV) {
           customMaterial.uniforms.uIsUVMode.value[i] = 1.0;
           customMaterial.uniforms.uCentersUV.value[i].set(t.hitUV.x, t.hitUV.y);
-          customMaterial.uniforms.uScalesUV.value[i] = (trans.scale / 100) * 0.85;
-          customMaterial.uniforms.uRotationsUV.value[i] = trans.rotZ || 0.0;
+          customMaterial.uniforms.uScalesUV.value[i] = (trans.scale / 100) * 0.19;
+          const uvRotationOffset = 103.5;
+          customMaterial.uniforms.uRotationsUV.value[i] = (trans.rotZ || 0.0) + uvRotationOffset;
           customMaterial.uniforms.uUVChannels.value[i] = t.uvChannel ?? 0.0;
         } else if (t.position && t.normal) {
           customMaterial.uniforms.uIsUVMode.value[i] = 0.0;
@@ -299,7 +300,7 @@ function BodyModel({
           customMaterial.uniforms.uNormals.value[i].copy(basis.normal);
           customMaterial.uniforms.uTangents.value[i].copy(basis.tangent);
           customMaterial.uniforms.uBitangents.value[i].copy(basis.bitangent);
-          customMaterial.uniforms.uScalesProj.value[i] = (trans.scale / 100) * 0.85;
+          customMaterial.uniforms.uScalesProj.value[i] = (trans.scale / 100) * 2;
         }
       } else {
         customMaterial.uniforms.uHasTattoo.value[i] = 0.0;
@@ -320,7 +321,7 @@ function BodyModel({
       customMaterial.uniforms.uPreviewNormal.value.copy(basis.normal);
       customMaterial.uniforms.uPreviewTangent.value.copy(basis.tangent);
       customMaterial.uniforms.uPreviewBitangent.value.copy(basis.bitangent);
-      customMaterial.uniforms.uPreviewScaleProj.value = (trans.scale / 100) * 0.85;
+      customMaterial.uniforms.uPreviewScaleProj.value = (trans.scale / 100) * 2;
     } else {
       customMaterial.uniforms.uHasPreview.value = 0.0;
     }
