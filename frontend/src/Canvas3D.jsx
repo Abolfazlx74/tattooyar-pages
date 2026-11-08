@@ -5,18 +5,17 @@ import * as THREE from 'three';
 
 const MAX_TATTOOS = 8;
 
-// Calculate tangent basis for smooth projection along limbs
 function getStableLimbBasis(normal, rotZDeg = 0) {
   const n = normal.clone().normalize();
   const limbAxis = new THREE.Vector3(0, 1, 0);
   let tangent = new THREE.Vector3().crossVectors(limbAxis, n);
-  
+
   if (tangent.lengthSq() < 0.001) {
     tangent = new THREE.Vector3(1, 0, 0);
   } else {
     tangent.normalize();
   }
-  
+
   const bitangent = new THREE.Vector3().crossVectors(n, tangent).normalize();
 
   if (rotZDeg !== 0) {
@@ -35,20 +34,20 @@ const StableTattooShader = {
     uHasTattoo: { value: new Array(MAX_TATTOOS).fill(0.0) },
     uIsUVMode: { value: new Array(MAX_TATTOOS).fill(0.0) },
 
-    // Projection mapping uniforms
+    // Projection uniforms
     uPositions: { value: Array.from({ length: MAX_TATTOOS }, () => new THREE.Vector3()) },
     uNormals: { value: Array.from({ length: MAX_TATTOOS }, () => new THREE.Vector3(0, 0, 1)) },
     uTangents: { value: Array.from({ length: MAX_TATTOOS }, () => new THREE.Vector3(1, 0, 0)) },
     uBitangents: { value: Array.from({ length: MAX_TATTOOS }, () => new THREE.Vector3(0, 1, 0)) },
     uScalesProj: { value: new Array(MAX_TATTOOS).fill(0.5) },
 
-    // UV multi-channel mapping uniforms
+    // UV Multi-channel uniforms
     uCentersUV: { value: Array.from({ length: MAX_TATTOOS }, () => new THREE.Vector2()) },
     uScalesUV: { value: new Array(MAX_TATTOOS).fill(0.35) },
     uRotationsUV: { value: new Array(MAX_TATTOOS).fill(0.0) },
     uUVChannels: { value: new Array(MAX_TATTOOS).fill(0.0) },
 
-    // Real-time hover preview uniforms
+    // Real-time hover preview (Only active in projection mode)
     uPreviewMap: { value: null },
     uHasPreview: { value: 0.0 },
     uPreviewPosition: { value: new THREE.Vector3() },
@@ -57,7 +56,7 @@ const StableTattooShader = {
     uPreviewBitangent: { value: new THREE.Vector3(0, 1, 0) },
     uPreviewScaleProj: { value: 0.5 },
 
-    // Dynamic studio lighting direction
+    // Dynamic studio lighting
     uLightDir: { value: new THREE.Vector3(1.0, 1.5, 1.0) }
   },
   vertexShader: `
@@ -188,6 +187,7 @@ const StableTattooShader = {
         }
       }
 
+      // Preview with soft opacity ONLY active when not in UV mode
       if (uHasPreview > 0.5) {
         float dotNormP = dot(vWorldNormal, uPreviewNormal);
         if (dotNormP > -0.15) {
@@ -224,7 +224,8 @@ function BodyModel({
   activeUVZone,
   lightAngle,
   onPlaceTattoo,
-  onUpdateTransform
+  onUpdateTransform,
+  onHoverPoint
 }) {
   const { scene } = useGLTF(modelPath);
   const [textures, setTextures] = useState({});
@@ -296,7 +297,7 @@ function BodyModel({
           customMaterial.uniforms.uIsUVMode.value[i] = 1.0;
           customMaterial.uniforms.uCentersUV.value[i].set(t.hitUV.x, t.hitUV.y);
           customMaterial.uniforms.uScalesUV.value[i] = (trans.scale / 100) * 0.19;
-          
+
           const zoneOffset = t.zoneOffset ?? 0.0;
           customMaterial.uniforms.uRotationsUV.value[i] = (trans.rotZ || 0.0) + zoneOffset;
           customMaterial.uniforms.uUVChannels.value[i] = t.uvChannel ?? 0.0;
@@ -317,10 +318,11 @@ function BodyModel({
     }
   }, [customMaterial, tattoos, tattooTransforms, textures]);
 
+  // Preview management: Show shader preview ONLY in standard mode, never in UV mode
   useEffect(() => {
     if (!customMaterial) return;
 
-    if (isPlacingMode && hoverData && selectedTattooId && textures[selectedTattooId]) {
+    if (isPlacingMode && !isUVMode && hoverData && selectedTattooId && textures[selectedTattooId]) {
       const trans = tattooTransforms[selectedTattooId] || { scale: 35, rotZ: 0 };
       const basis = getStableLimbBasis(hoverData.normal, trans.rotZ || 0);
 
@@ -334,7 +336,7 @@ function BodyModel({
     } else {
       customMaterial.uniforms.uHasPreview.value = 0.0;
     }
-  }, [customMaterial, isPlacingMode, hoverData, selectedTattooId, tattooTransforms, textures]);
+  }, [customMaterial, isPlacingMode, isUVMode, hoverData, selectedTattooId, tattooTransforms, textures]);
 
   const dragStartRef = useRef(null);
 
@@ -397,11 +399,14 @@ function BodyModel({
     const normalMatrix = new THREE.Matrix3().getNormalMatrix(e.object.matrixWorld);
     const worldNormal = hitNormal.applyMatrix3(normalMatrix).normalize();
 
-    setHoverData({ point: hitPoint, normal: worldNormal });
+    const data = { point: hitPoint, normal: worldNormal };
+    setHoverData(data);
+    if (onHoverPoint) onHoverPoint(data);
   };
 
   const handlePointerLeave = () => {
     setHoverData(null);
+    if (onHoverPoint) onHoverPoint(null);
   };
 
   const handlePointerDown = (e) => {
@@ -471,6 +476,31 @@ function BodyModel({
   );
 }
 
+// Indicator guide ring for UV placement mode
+function SurfaceTargetGuide({ hoverData }) {
+  if (!hoverData) return null;
+  const { point, normal } = hoverData;
+  const offsetPoint = point.clone().add(normal.clone().multiplyScalar(0.015));
+
+  const quaternion = new THREE.Quaternion().setFromUnitVectors(
+    new THREE.Vector3(0, 0, 1),
+    normal
+  );
+
+  return (
+    <group position={offsetPoint} quaternion={quaternion}>
+      <mesh>
+        <ringGeometry args={[0.035, 0.046, 32]} />
+        <meshBasicMaterial color="#38bdf8" side={THREE.DoubleSide} transparent opacity={0.85} />
+      </mesh>
+      <mesh>
+        <circleGeometry args={[0.012, 16]} />
+        <meshBasicMaterial color="#38bdf8" side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  );
+}
+
 export default function Canvas3D({
   modelPath,
   tattoos,
@@ -483,8 +513,15 @@ export default function Canvas3D({
   onPlaceTattoo,
   onUpdateTransform
 }) {
+  const [hoverData, setHoverData] = useState(null);
+
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div style={{
+      width: '100%',
+      height: '100%',
+      position: 'relative',
+      cursor: isPlacingMode ? 'crosshair' : 'default'
+    }}>
       <Canvas
         gl={{ alpha: true, antialias: true }}
         camera={{ position: [0, 0, 2.4], fov: 45 }}
@@ -503,7 +540,10 @@ export default function Canvas3D({
               lightAngle={lightAngle}
               onPlaceTattoo={onPlaceTattoo}
               onUpdateTransform={onUpdateTransform}
+              onHoverPoint={setHoverData}
             />
+            {/* Show target ring guide ONLY when in UV placement mode */}
+            {isPlacingMode && isUVMode && <SurfaceTargetGuide hoverData={hoverData} />}
           </Center>
         </Suspense>
 

@@ -224,10 +224,7 @@ export default function App() {
   const [showGuide, setShowGuide] = useState(false);
   const [showFullBodyModal, setShowFullBodyModal] = useState(false);
 
-  // Sidebar visibility state
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-  // Studio lighting orbit angle (0 - 360 deg)
   const [lightAngle, setLightAngle] = useState(45);
 
   const [openSection, setOpenSection] = useState('tattoos');
@@ -235,8 +232,6 @@ export default function App() {
   const longPressTimerRef = useRef(null);
 
   const [tattooTransforms, setTattooTransforms] = useState({});
-
-  // Mobile portrait orientation blocker
   const [isPortraitBlocked, setIsPortraitBlocked] = useState(false);
 
   useEffect(() => {
@@ -698,7 +693,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Step 3: Interactive 3D Studio (LTR Layout for Robust Left-Canvas & Right-Sidebar) */}
+      {/* Step 3: Interactive 3D Studio (LTR Layout: Viewport on Left, Sidebar on Right) */}
       {step === 3 && (
         <div style={{
           flex: 1,
@@ -707,11 +702,11 @@ export default function App() {
           width: '100%',
           height: '100%',
           overflow: 'hidden',
-          direction: 'ltr', // Anchor 3D viewport on the left and Sidebar on the right
+          direction: 'ltr',
           position: 'relative'
         }}>
 
-          {/* 1. Main 3D Viewport (Fills Remaining Space on Left) */}
+          {/* 1. Main 3D Viewport */}
           <div style={{
             flex: 1,
             height: '100%',
@@ -719,7 +714,7 @@ export default function App() {
             overflow: 'hidden'
           }}>
 
-            {/* Top Toolbar: Positioned at Top-Left of Viewport */}
+            {/* Top Toolbar */}
             <div style={{
               position: 'absolute',
               top: '14px',
@@ -855,7 +850,7 @@ export default function App() {
             />
           </div>
 
-          {/* 2. Floating Toggle Button (Always visible on right edge) */}
+          {/* 2. Floating Toggle Button */}
           <button
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             title={isSidebarOpen ? 'بستن پنل تنظیمات' : 'باز کردن پنل تنظیمات'}
@@ -882,7 +877,7 @@ export default function App() {
             {isSidebarOpen ? <ChevronRight size={20} /> : <ChevronLeft size={20} color="#60a5fa" />}
           </button>
 
-          {/* 3. Collapsible Controls Sidebar (Fixed on Right Side) */}
+          {/* 3. Collapsible Controls Sidebar */}
           <div style={{
             width: isSidebarOpen ? '320px' : '0px',
             minWidth: isSidebarOpen ? '320px' : '0px',
