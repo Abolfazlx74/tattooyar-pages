@@ -3,8 +3,9 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useGLTF, Center } from '@react-three/drei';
 import * as THREE from 'three';
 
-const MAX_TATTOOS = 4;
+const MAX_TATTOOS = 8;
 
+// Calculate tangent basis for smooth projection along limbs
 function getStableLimbBasis(normal, rotZDeg = 0) {
   const n = normal.clone().normalize();
   const limbAxis = new THREE.Vector3(0, 1, 0);
@@ -30,24 +31,24 @@ function getStableLimbBasis(normal, rotZDeg = 0) {
 const StableTattooShader = {
   uniforms: {
     uBaseColor: { value: new THREE.Color('#d4d4d8') },
-    uTattooMaps: { value: [null, null, null, null] },
-    uHasTattoo: { value: [0.0, 0.0, 0.0, 0.0] },
-    uIsUVMode: { value: [0.0, 0.0, 0.0, 0.0] },
+    uTattooMaps: { value: new Array(MAX_TATTOOS).fill(null) },
+    uHasTattoo: { value: new Array(MAX_TATTOOS).fill(0.0) },
+    uIsUVMode: { value: new Array(MAX_TATTOOS).fill(0.0) },
 
-    // حالت پروجکشن استوانه‌ای پایدار
-    uPositions: { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
-    uNormals: { value: [new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 1)] },
-    uTangents: { value: [new THREE.Vector3(1, 0, 0), new THREE.Vector3(1, 0, 0), new THREE.Vector3(1, 0, 0), new THREE.Vector3(1, 0, 0)] },
-    uBitangents: { value: [new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0)] },
-    uScalesProj: { value: [0.5, 0.5, 0.5, 0.5] },
+    // Projection mapping uniforms
+    uPositions: { value: Array.from({ length: MAX_TATTOOS }, () => new THREE.Vector3()) },
+    uNormals: { value: Array.from({ length: MAX_TATTOOS }, () => new THREE.Vector3(0, 0, 1)) },
+    uTangents: { value: Array.from({ length: MAX_TATTOOS }, () => new THREE.Vector3(1, 0, 0)) },
+    uBitangents: { value: Array.from({ length: MAX_TATTOOS }, () => new THREE.Vector3(0, 1, 0)) },
+    uScalesProj: { value: new Array(MAX_TATTOOS).fill(0.5) },
 
-    // حالت UV چندکاناله
-    uCentersUV: { value: [new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2()] },
-    uScalesUV: { value: [0.35, 0.35, 0.35, 0.35] },
-    uRotationsUV: { value: [0.0, 0.0, 0.0, 0.0] },
-    uUVChannels: { value: [0.0, 0.0, 0.0, 0.0] },
+    // UV multi-channel mapping uniforms
+    uCentersUV: { value: Array.from({ length: MAX_TATTOOS }, () => new THREE.Vector2()) },
+    uScalesUV: { value: new Array(MAX_TATTOOS).fill(0.35) },
+    uRotationsUV: { value: new Array(MAX_TATTOOS).fill(0.0) },
+    uUVChannels: { value: new Array(MAX_TATTOOS).fill(0.0) },
 
-    // پیش‌نمایش شابلون
+    // Real-time hover preview uniforms
     uPreviewMap: { value: null },
     uHasPreview: { value: 0.0 },
     uPreviewPosition: { value: new THREE.Vector3() },
@@ -56,7 +57,7 @@ const StableTattooShader = {
     uPreviewBitangent: { value: new THREE.Vector3(0, 1, 0) },
     uPreviewScaleProj: { value: 0.5 },
 
-    // جهت نور گردشی اسلایدر
+    // Dynamic studio lighting direction
     uLightDir: { value: new THREE.Vector3(1.0, 1.5, 1.0) }
   },
   vertexShader: `
@@ -86,21 +87,23 @@ const StableTattooShader = {
     }
   `,
   fragmentShader: `
+    #define MAX_TATTOOS 8
+
     uniform vec3 uBaseColor;
-    uniform sampler2D uTattooMaps[4];
-    uniform float uHasTattoo[4];
-    uniform float uIsUVMode[4];
+    uniform sampler2D uTattooMaps[MAX_TATTOOS];
+    uniform float uHasTattoo[MAX_TATTOOS];
+    uniform float uIsUVMode[MAX_TATTOOS];
 
-    uniform vec3 uPositions[4];
-    uniform vec3 uNormals[4];
-    uniform vec3 uTangents[4];
-    uniform vec3 uBitangents[4];
-    uniform float uScalesProj[4];
+    uniform vec3 uPositions[MAX_TATTOOS];
+    uniform vec3 uNormals[MAX_TATTOOS];
+    uniform vec3 uTangents[MAX_TATTOOS];
+    uniform vec3 uBitangents[MAX_TATTOOS];
+    uniform float uScalesProj[MAX_TATTOOS];
 
-    uniform vec2 uCentersUV[4];
-    uniform float uScalesUV[4];
-    uniform float uRotationsUV[4];
-    uniform float uUVChannels[4];
+    uniform vec2 uCentersUV[MAX_TATTOOS];
+    uniform float uScalesUV[MAX_TATTOOS];
+    uniform float uRotationsUV[MAX_TATTOOS];
+    uniform float uUVChannels[MAX_TATTOOS];
 
     uniform sampler2D uPreviewMap;
     uniform float uHasPreview;
@@ -149,7 +152,7 @@ const StableTattooShader = {
     void main() {
       vec3 finalSkin = uBaseColor;
 
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < MAX_TATTOOS; i++) {
         if (uHasTattoo[i] > 0.5) {
           vec2 uv = vec2(-1.0);
           float alphaFactor = 1.0;
@@ -175,6 +178,10 @@ const StableTattooShader = {
             else if (i == 1) col = texture2D(uTattooMaps[1], uv);
             else if (i == 2) col = texture2D(uTattooMaps[2], uv);
             else if (i == 3) col = texture2D(uTattooMaps[3], uv);
+            else if (i == 4) col = texture2D(uTattooMaps[4], uv);
+            else if (i == 5) col = texture2D(uTattooMaps[5], uv);
+            else if (i == 6) col = texture2D(uTattooMaps[6], uv);
+            else if (i == 7) col = texture2D(uTattooMaps[7], uv);
 
             finalSkin = mix(finalSkin, col.rgb, col.a * alphaFactor);
           }
@@ -195,7 +202,6 @@ const StableTattooShader = {
         }
       }
 
-      // نورپردازی استودیو با سایه‌روشن طبیعی و قابلیت گردش ۳۶۰ درجه
       vec3 norm = normalize(vWorldNormal);
       vec3 light = normalize(uLightDir);
       float diff = max(dot(norm, light), 0.0);
@@ -244,7 +250,6 @@ function BodyModel({
     });
   }, []);
 
-  // آپدیت بردار زاویه نور بر اساس اسلایدر
   useEffect(() => {
     if (!customMaterial) return;
     const rad = ((lightAngle || 0) * Math.PI) / 180;
@@ -257,7 +262,10 @@ function BodyModel({
     scene.traverse((child) => {
       if (child.isMesh) {
         const geom = child.geometry;
-        const s0 = geom.attributes.uv;
+        const count = geom.attributes.position ? geom.attributes.position.count : 0;
+        const dummyUV = new THREE.BufferAttribute(new Float32Array(count * 2), 2);
+
+        const s0 = geom.attributes.uv || dummyUV;
         const s1 = geom.attributes.uv1 || geom.attributes.uv2 || s0;
         const s2 = geom.attributes.uv2 || geom.attributes.uv3 || geom.attributes._uv2 || s1;
         const s3 = geom.attributes.uv3 || geom.attributes.uv4 || geom.attributes._uv3 || s2;
@@ -288,8 +296,9 @@ function BodyModel({
           customMaterial.uniforms.uIsUVMode.value[i] = 1.0;
           customMaterial.uniforms.uCentersUV.value[i].set(t.hitUV.x, t.hitUV.y);
           customMaterial.uniforms.uScalesUV.value[i] = (trans.scale / 100) * 0.19;
-          const uvRotationOffset = 103.5;
-          customMaterial.uniforms.uRotationsUV.value[i] = (trans.rotZ || 0.0) + uvRotationOffset;
+          
+          const zoneOffset = t.zoneOffset ?? 0.0;
+          customMaterial.uniforms.uRotationsUV.value[i] = (trans.rotZ || 0.0) + zoneOffset;
           customMaterial.uniforms.uUVChannels.value[i] = t.uvChannel ?? 0.0;
         } else if (t.position && t.normal) {
           customMaterial.uniforms.uIsUVMode.value[i] = 0.0;
