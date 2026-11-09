@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Canvas3D from './Canvas3D';
-import TattooExtractor from './TattooExtractor';
 import {
   Sparkles,
   Trash2,
@@ -17,14 +16,18 @@ import {
   HelpCircle,
   Sun,
   RotateCw,
-  Info
+  Info,
+  Search,
+  Plus,
+  Check
 } from 'lucide-react';
+import { PRESET_TATTOOS, TATTOO_CATEGORIES, getAssetUrl } from './presetTattoos';
 
 const BODY_PARTS = [
   {
     id: 'torso',
     name: 'نیم‌تنه بالا',
-    path: '/models/body_parts/torso.glb',
+    path: getAssetUrl('models/body_parts/torso.glb'),
     icon: '👕',
     zones: [
       { id: 0, label: 'سرشانه / سینه', rotOffset: 0 },
@@ -35,7 +38,7 @@ const BODY_PARTS = [
   {
     id: 'arm_right',
     name: 'دست راست',
-    path: '/models/body_parts/arm_right.glb',
+    path: getAssetUrl('models/body_parts/arm_right.glb'),
     icon: '💪',
     zones: [
       { id: 0, label: 'دید از چپ مدل (FL)', rotOffset: 79 },
@@ -47,7 +50,7 @@ const BODY_PARTS = [
   {
     id: 'arm_left',
     name: 'دست چپ',
-    path: '/models/body_parts/arm_left.glb',
+    path: getAssetUrl('models/body_parts/arm_left.glb'),
     icon: '💪',
     zones: [
       { id: 0, label: 'دید از چپ مدل (FL)', rotOffset: 79 },
@@ -59,7 +62,7 @@ const BODY_PARTS = [
   {
     id: 'leg_right',
     name: 'پای راست',
-    path: '/models/body_parts/leg_right.glb',
+    path: getAssetUrl('models/body_parts/leg_right.glb'),
     icon: '🦵',
     zones: [
       { id: 2, label: 'دید از راست مدل', rotOffset: 0 },
@@ -71,7 +74,7 @@ const BODY_PARTS = [
   {
     id: 'leg_left',
     name: 'پای چپ',
-    path: '/models/body_parts/leg_left.glb',
+    path: getAssetUrl('models/body_parts/leg_left.glb'),
     icon: '🦵',
     zones: [
       { id: 0, label: 'دید از راست مدل', rotOffset: 0 },
@@ -83,7 +86,7 @@ const BODY_PARTS = [
   {
     id: 'head',
     name: 'سر',
-    path: '/models/body_parts/head.glb',
+    path: getAssetUrl('models/body_parts/head.glb'),
     icon: '👤',
     zones: [
       { id: 0, label: 'دید صورت (FF)', rotOffset: 0 },
@@ -93,7 +96,7 @@ const BODY_PARTS = [
   {
     id: 'full_body',
     name: 'بدن کامل',
-    path: '/models/body_parts/full_body.glb',
+    path: getAssetUrl('models/body_parts/full_body.glb'),
     icon: '🧍',
     zones: []
   },
@@ -215,9 +218,41 @@ function PhysicsSlider({ label, value, min, max, unit = '', onChange }) {
 export default function App() {
   const [step, setStep] = useState(1);
   const [selectedPart, setSelectedPart] = useState(BODY_PARTS[0]);
-  const [tattoos, setTattoos] = useState([]);
-  const [selectedTattooId, setSelectedTattooId] = useState(null);
+
+  // Initial preset selection (Wolf, Dragon, Rose)
+  const [tattoos, setTattoos] = useState(() => [
+    {
+      id: 'preset_wolf',
+      name: 'گرگ هندسی',
+      url: getAssetUrl('tattoos/wolf.png'),
+      position: null,
+      hitUV: null,
+      zoneOffset: 0
+    },
+    {
+      id: 'preset_dragon',
+      name: 'اژدهای شرقی',
+      url: getAssetUrl('tattoos/dragon.png'),
+      position: null,
+      hitUV: null,
+      zoneOffset: 0
+    },
+    {
+      id: 'preset_rose',
+      name: 'رز سیاه',
+      url: getAssetUrl('tattoos/rose.png'),
+      position: null,
+      hitUV: null,
+      zoneOffset: 0
+    }
+  ]);
+  const [selectedTattooId, setSelectedTattooId] = useState('preset_wolf');
   const [isPlacingMode, setIsPlacingMode] = useState(false);
+
+  // Gallery filter state
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
 
   const [isUVMode, setIsUVMode] = useState(false);
   const [activeUVZone, setActiveUVZone] = useState(0);
@@ -306,21 +341,30 @@ export default function App() {
     );
   };
 
-  const handleFileUpload = (files) => {
-    const newItems = Array.from(files).filter(f => f.type.startsWith('image/')).map((file) => ({
-      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: file.name,
-      url: URL.createObjectURL(file),
-      position: null,
-      hitUV: null,
-      zoneOffset: 0
-    }));
-    if (newItems.length > 0) {
-      setTattoos((prev) => [...prev, ...newItems]);
-      if (!selectedTattooId) {
-        setSelectedTattooId(newItems[0].id);
+  const handleTogglePresetTattoo = (preset) => {
+    setTattoos((prev) => {
+      const exists = prev.some((t) => t.id === preset.id);
+      if (exists) {
+        const next = prev.filter((t) => t.id !== preset.id);
+        if (selectedTattooId === preset.id) {
+          setSelectedTattooId(next.length > 0 ? next[0].id : null);
+        }
+        return next;
+      } else {
+        const newTattoo = {
+          id: preset.id,
+          name: preset.name,
+          url: getAssetUrl(`tattoos/${preset.filename}`),
+          position: null,
+          hitUV: null,
+          zoneOffset: 0
+        };
+        if (!selectedTattooId) {
+          setSelectedTattooId(preset.id);
+        }
+        return [...prev, newTattoo];
       }
-    }
+    });
   };
 
   const handleDeleteTattoo = (id, e) => {
@@ -351,6 +395,18 @@ export default function App() {
     }
   };
 
+  // Filtered preset tattoos for Step 2 and modal
+  const filteredPresets = useMemo(() => {
+    return PRESET_TATTOOS.filter((item) => {
+      const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
+      const matchesSearch = !searchQuery.trim() ||
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.categoryName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.desc && item.desc.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchesCategory && matchesSearch;
+    });
+  }, [activeCategory, searchQuery]);
+
   return (
     <div
       className="notranslate"
@@ -364,7 +420,8 @@ export default function App() {
         flexDirection: 'column',
         overflow: 'hidden',
         direction: 'rtl',
-        position: 'relative'
+        position: 'relative',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}
       onClick={() => setContextMenu(null)}
     >
@@ -398,196 +455,166 @@ export default function App() {
             <RotateCw size={32} color="#60a5fa" style={{ animation: 'spin 3s linear infinite' }} />
           </div>
           <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '10px' }}>دستگاه را افقی کنید</h2>
-          <p style={{ fontSize: '13px', color: '#a1a1aa', maxWidth: '320px', lineHeight: '1.7' }}>
-            برای مشاهده مناسب بوم سه‌بعدی و دسترسی کامل به ابزارهای تتو، لطفاً جهت گوشی یا تبلت خود را به حالت افقی (Landscape) تغییر دهید.
+          <p style={{ fontSize: '13px', color: '#a1a1aa', maxWidth: '300px', lineHeight: '1.6' }}>
+            برای تجربه روان، دقیق و کنترل کامل استودیوی سه‌بعدی تتو، لطفاً گوشی یا تبلت خود را در حالت افقی (Landscape) قرار دهید.
           </p>
-          <style>{`
-            @keyframes spin { 
-              0% { transform: rotate(0deg); } 
-              100% { transform: rotate(360deg); } 
-            }
-          `}</style>
         </div>
       )}
 
-      {/* Full Body UV Notice Modal */}
-      {showFullBodyModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 200,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(8px)',
+      {/* Header bar */}
+      <div style={{
+        height: '56px',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 20px',
+        backgroundColor: '#09090b',
+        zIndex: 50
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '20px'
-          }}
-          onClick={() => setShowFullBodyModal(false)}
-        >
-          <div
+            boxShadow: '0 2px 10px rgba(59, 130, 246, 0.4)'
+          }}>
+            <Sparkles size={18} color="#fff" />
+          </div>
+          <div style={{ fontWeight: '800', fontSize: '16px', letterSpacing: '-0.3px' }}>
+            تتویار <span style={{ fontSize: '11px', color: '#60a5fa', fontWeight: '600', marginRight: '4px' }}>استودیوی سه‌بعدی</span>
+          </div>
+        </div>
+
+        {/* Steps indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+          <button
+            onClick={() => setStep(1)}
             style={{
-              backgroundColor: '#18181b',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: '16px',
-              padding: '24px',
-              maxWidth: '440px',
-              width: '100%',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-              direction: 'rtl'
+              background: step === 1 ? 'rgba(59,130,246,0.18)' : 'transparent',
+              color: step === 1 ? '#60a5fa' : '#71717a',
+              border: step === 1 ? '1px solid rgba(59,130,246,0.4)' : '1px solid transparent',
+              padding: '5px 12px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600'
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', color: '#60a5fa' }}>
-              <Info size={22} />
-              <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: '#fff' }}>
-                راهنمای حالت مدل «بدن کامل»
-              </h3>
-            </div>
-            <p style={{ fontSize: '13px', color: '#d4d4d8', lineHeight: '1.8', margin: '0 0 20px 0' }}>
-              مدل بدن کامل اختصاصاً جهت جانمایی یکپارچه طرح‌ها در <strong>نواحی مرزی و اتصالات اندام‌ها</strong> (مانند اتصال کتف به بازو، سرشانه، یا پهلو به ران) طراحی شده است تا تتو بدون قطع‌شدگی اعمال شود.
-              <br /><br />
-              چنانچه قصد دارید طرحی عریض را به دور بازو، ساق، یا پهلو اجرا کنید، لطفاً از منوی مرحله اول، <strong>مدل اختصاصی همان عضو (دست، پا و...)</strong> را انتخاب فرمایید.
-            </p>
+            ۱. انتخاب عضو
+          </button>
+          <span style={{ color: '#3f3f46' }}>›</span>
+          <button
+            onClick={() => setStep(2)}
+            style={{
+              background: step === 2 ? 'rgba(59,130,246,0.18)' : 'transparent',
+              color: step === 2 ? '#60a5fa' : '#71717a',
+              border: step === 2 ? '1px solid rgba(59,130,246,0.4)' : '1px solid transparent',
+              padding: '5px 12px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600'
+            }}
+          >
+            ۲. انتخاب طرح‌ها ({tattoos.length})
+          </button>
+          <span style={{ color: '#3f3f46' }}>›</span>
+          <button
+            disabled={tattoos.length === 0}
+            onClick={() => setStep(3)}
+            style={{
+              background: step === 3 ? 'rgba(59,130,246,0.18)' : 'transparent',
+              color: step === 3 ? '#60a5fa' : tattoos.length > 0 ? '#a1a1aa' : '#3f3f46',
+              border: step === 3 ? '1px solid rgba(59,130,246,0.4)' : '1px solid transparent',
+              padding: '5px 12px',
+              borderRadius: '8px',
+              cursor: tattoos.length > 0 ? 'pointer' : 'not-allowed',
+              fontWeight: '600'
+            }}
+          >
+            ۳. استودیو سه‌بعدی
+          </button>
+        </div>
+      </div>
+
+      {/* Step 1: Body Part Selection */}
+      {step === 1 && (
+        <div style={{ flex: 1, padding: '36px 20px', maxWidth: '780px', margin: '0 auto', width: '100%', overflowY: 'auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '8px' }}>موضع تتو را انتخاب کنید</h1>
+            <p style={{ color: '#a1a1aa', fontSize: '13px' }}>مدل سه‌بعدی مورد نظر را برای تست و جانمایی دقیق تتو انتخاب نمایید.</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px', marginBottom: '30px' }}>
+            {BODY_PARTS.map((part) => {
+              const isSelected = selectedPart.id === part.id;
+              return (
+                <div
+                  key={part.id}
+                  onClick={() => {
+                    setSelectedPart(part);
+                    setStep(2);
+                  }}
+                  style={{
+                    backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+                    border: isSelected ? '2px solid #3b82f6' : '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ fontSize: '28px' }}>{part.icon}</div>
+                    <div>
+                      <div style={{ fontWeight: '700', fontSize: '15px' }}>{part.name}</div>
+                      <div style={{ fontSize: '11px', color: '#71717a', marginTop: '3px' }}>
+                        {part.zones.length > 0 ? `${part.zones.length} زاویه دید تخصصی` : 'مدل جامع'}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronLeft size={18} color="#71717a" />
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
             <button
-              onClick={() => setShowFullBodyModal(false)}
+              onClick={() => setStep(2)}
               style={{
-                width: '100%',
-                padding: '10px',
-                backgroundColor: '#3b82f6',
+                padding: '12px 28px',
+                borderRadius: '12px',
+                background: '#3b82f6',
                 color: '#fff',
                 border: 'none',
-                borderRadius: '8px',
-                fontSize: '13px',
                 fontWeight: '700',
-                cursor: 'pointer'
+                fontSize: '14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px rgba(59,130,246,0.35)'
               }}
             >
-              متوجه شدم
+              <span>مرحله بعد: انتخاب طرح‌های تتو</span>
+              <ChevronLeft size={18} />
             </button>
           </div>
         </div>
       )}
 
-      {/* Context Menu */}
-      {contextMenu && (
-        <div
-          style={{
-            position: 'fixed',
-            top: contextMenu.y,
-            left: contextMenu.x,
-            backgroundColor: 'rgba(24, 24, 27, 0.95)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '10px',
-            padding: '6px',
-            zIndex: 100,
-            boxShadow: '0 10px 25px rgba(0,0,0,0.6)'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={(e) => handleDeleteTattoo(contextMenu.id, e)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 12px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              color: '#ef4444',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              borderRadius: '6px'
-            }}
-          >
-            <Trash2 size={15} />
-            <span>حذف طرح</span>
-          </button>
-        </div>
-      )}
-
-      {/* Step 1: Body Part Selection */}
-      {step === 1 && (
-        <div style={{ flex: 1, padding: '32px 20px', overflowY: 'auto', maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
-          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '6px 16px',
-              borderRadius: '999px',
-              background: 'rgba(59, 130, 246, 0.1)',
-              border: '1px solid rgba(59, 130, 246, 0.2)',
-              color: '#60a5fa',
-              fontSize: '13px',
-              marginBottom: '16px'
-            }}>
-              <Sparkles size={16} />
-              <span>مرحله ۱ از ۳: انتخاب موضع تتو</span>
-            </div>
-            <h1 style={{ fontSize: '26px', fontWeight: '800', marginBottom: '8px', color: '#fff' }}>
-              کدام بخش از بدن را می‌خواهید؟
-            </h1>
-            <p style={{ color: '#71717a', fontSize: '13px' }}>
-              عضو مورد نظر خود را برای شروع انتخاب نمایید.
-            </p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
-            {BODY_PARTS.map((part) => (
-              <div
-                key={part.id}
-                onClick={() => {
-                  setSelectedPart(part);
-                  setStep(2);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '16px',
-                  borderRadius: '14px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  backdropFilter: 'blur(16px)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '12px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '20px'
-                  }}>
-                    {part.icon}
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#fff', margin: 0 }}>
-                      {part.name}
-                    </h3>
-                  </div>
-                </div>
-                <ChevronLeft size={18} color="#71717a" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: Tattoo Extraction & Upload */}
+      {/* Step 2: Preset Tattoo Gallery Selection */}
       {step === 2 && (
-        <div style={{ flex: 1, padding: '30px 20px', maxWidth: '750px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ flex: 1, padding: '24px 20px', maxWidth: '1000px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+          {/* Top navigation */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
             <button
               onClick={() => setStep(1)}
               style={{
@@ -606,94 +633,237 @@ export default function App() {
               <ArrowRight size={16} />
               <span>تغییر موضع ({selectedPart.name})</span>
             </button>
-            <div style={{ fontSize: '13px', color: '#60a5fa', fontWeight: '600' }}>مرحله ۲ از ۳: آپلود طرح‌های تتو</div>
-          </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <TattooExtractor
-              onUseDesign={(file) => handleFileUpload([file])}
-            />
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', marginBottom: '20px' }}>
-            <div style={{ fontSize: '13px', color: '#a1a1aa', marginBottom: '12px' }}>
-              طرح‌های وارد شده ({tattoos.length}):
-            </div>
-            {tattoos.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px', color: '#52525b', fontSize: '13px' }}>
-                هنوز هیچ طرحی اضافه نشده است.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ fontSize: '13px', color: '#60a5fa', fontWeight: '700' }}>
+                مرحله ۲: انتخاب طرح‌های تتو ({tattoos.length} طرح انتخابی)
               </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '10px' }}>
-                {tattoos.map((t) => (
-                  <div
-                    key={t.id}
+              <button
+                disabled={tattoos.length === 0}
+                onClick={() => setStep(3)}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  background: tattoos.length > 0 ? '#3b82f6' : 'rgba(255,255,255,0.08)',
+                  color: tattoos.length > 0 ? '#fff' : '#71717a',
+                  border: 'none',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  cursor: tattoos.length > 0 ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: tattoos.length > 0 ? '0 4px 14px rgba(59,130,246,0.35)' : 'none'
+                }}
+              >
+                <span>ورود به استودیوی سه‌بعدی</span>
+                <ChevronLeft size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Filter & Search Bar */}
+          <div style={{
+            backgroundColor: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '14px',
+            padding: '14px',
+            marginBottom: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            {/* Search Input */}
+            <div style={{ position: 'relative', width: '100%' }}>
+              <Search size={16} color="#71717a" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="جستجو در بین طرح‌های تتو (گرگ، اژدها، جمجمه، رز، وایکینگ...)"
+                style={{
+                  width: '100%',
+                  padding: '9px 36px 9px 12px',
+                  backgroundColor: 'rgba(0,0,0,0.35)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontSize: '13px',
+                  outline: 'none',
+                  direction: 'rtl'
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    left: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#71717a',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Category tabs */}
+            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+              {TATTOO_CATEGORIES.map((cat) => {
+                const isActive = activeCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
                     style={{
-                      position: 'relative',
-                      aspectRatio: '1/1',
-                      borderRadius: '12px',
-                      backgroundColor: '#ffffff',
-                      border: selectedTattooId === t.id ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
-                      padding: '6px',
+                      background: isActive ? '#3b82f6' : 'rgba(255,255,255,0.05)',
+                      color: isActive ? '#fff' : '#a1a1aa',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      fontWeight: isActive ? '700' : '500',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Grid of Preset Tattoos */}
+          <div style={{ flex: 1, overflowY: 'auto', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '14px' }}>
+              {filteredPresets.map((preset) => {
+                const isSelected = tattoos.some((t) => t.id === preset.id);
+                return (
+                  <div
+                    key={preset.id}
+                    onClick={() => handleTogglePresetTattoo(preset)}
+                    style={{
+                      backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+                      border: isSelected ? '2px solid #3b82f6' : '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '14px',
+                      padding: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                      transition: 'all 0.18s ease',
+                      position: 'relative'
+                    }}
+                  >
+                    {/* Checkbox indicator */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '10px',
+                      left: '10px',
+                      zIndex: 10,
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      background: isSelected ? '#3b82f6' : 'rgba(0,0,0,0.5)',
+                      border: isSelected ? 'none' : '1px solid rgba(255,255,255,0.2)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    <img src={t.url} alt={t.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                    <button
-                      onClick={(e) => handleDeleteTattoo(t.id, e)}
-                      style={{
-                        position: 'absolute',
-                        top: '4px',
-                        left: '4px',
-                        background: '#ef4444',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        zIndex: 5
-                      }}
-                    >
-                      <X size={12} />
-                    </button>
+                      color: '#fff',
+                      boxShadow: isSelected ? '0 2px 8px rgba(59,130,246,0.5)' : 'none'
+                    }}>
+                      {isSelected ? <Check size={14} strokeWidth={3} /> : <Plus size={14} color="#a1a1aa" />}
+                    </div>
+
+                    {/* Tattoo Image Container */}
+                    <div style={{
+                      aspectRatio: '1/1',
+                      borderRadius: '10px',
+                      backgroundColor: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '12px',
+                      overflow: 'hidden',
+                      boxShadow: 'inset 0 0 8px rgba(0,0,0,0.06)'
+                    }}>
+                      <img
+                        src={getAssetUrl(`tattoos/${preset.filename}`)}
+                        alt={preset.name}
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          objectFit: 'contain',
+                          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))'
+                        }}
+                      />
+                    </div>
+
+                    {/* Info */}
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: '700', fontSize: '13px' }}>{preset.name}</span>
+                        <span style={{ fontSize: '10px', background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: '6px', color: '#a1a1aa' }}>
+                          {preset.categoryName}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#71717a', lineHeight: '1.4' }}>
+                        {preset.desc}
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
           </div>
 
-          <button
-            disabled={tattoos.length === 0}
-            onClick={() => setStep(3)}
-            style={{
-              padding: '13px',
-              borderRadius: '12px',
-              background: tattoos.length > 0 ? '#3b82f6' : 'rgba(255,255,255,0.08)',
-              color: tattoos.length > 0 ? '#fff' : '#71717a',
-              border: 'none',
-              fontWeight: '700',
-              fontSize: '14px',
-              cursor: tattoos.length > 0 ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-          >
-            <span>ورود به استودیوی سه‌بعدی</span>
-            <ChevronLeft size={18} />
-          </button>
+          {/* Bottom Bar */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '14px',
+            background: 'rgba(24, 24, 27, 0.8)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '12px',
+            border: '1px solid rgba(255,255,255,0.08)'
+          }}>
+            <div style={{ fontSize: '13px', color: '#d4d4d8' }}>
+              تعداد طرح‌های برگزیده: <strong style={{ color: '#60a5fa' }}>{tattoos.length} طرح</strong>
+            </div>
+
+            <button
+              disabled={tattoos.length === 0}
+              onClick={() => setStep(3)}
+              style={{
+                padding: '10px 24px',
+                borderRadius: '10px',
+                background: tattoos.length > 0 ? '#3b82f6' : 'rgba(255,255,255,0.08)',
+                color: tattoos.length > 0 ? '#fff' : '#71717a',
+                border: 'none',
+                fontWeight: '700',
+                fontSize: '13px',
+                cursor: tattoos.length > 0 ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <span>ورود به استودیوی سه‌بعدی</span>
+              <ChevronLeft size={16} />
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Step 3: Interactive 3D Studio (LTR Layout: Viewport on Left, Sidebar on Right) */}
+      {/* Step 3: Interactive 3D Studio */}
       {step === 3 && (
         <div style={{
           flex: 1,
@@ -737,7 +907,7 @@ export default function App() {
                 style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 <ArrowRight size={14} />
-                <span>طرح‌ها</span>
+                <span>گالری طرح‌ها</span>
               </button>
               <span style={{ color: '#3f3f46' }}>|</span>
 
@@ -832,7 +1002,7 @@ export default function App() {
                 direction: 'rtl'
               }}>
                 <div style={{ fontWeight: '700', color: '#c084fc', marginBottom: '4px' }}>راهنمای انتخاب موضع:</div>
-                اگر طرح بسیار عریض است و روی انحنای عضو کش می‌آید، حالت «طرح عریض» را روشن کرده و زاویه مورد نظر عضو را انتخاب کنید تا طرح با چرخش طبیعی و بدون دفرمه شدن قرار گیرد.
+                اگر طرح بسیار عریض است و روی انحنای عضو کش می‌آید، حالت «طرح عریض» را روشن کرده و زاویه مورد نظر عضو را انتخاب کنید تا طرح با چرخش طبیعی و بدون دفرمه شدن قرار گیرد. برای چسباندن تتو، حالت «لمس پوست» را فعال کرده و روی عضو کلیک کنید.
               </div>
             )}
 
@@ -934,7 +1104,8 @@ export default function App() {
                       <div style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(65px, 1fr))',
-                        gap: '8px'
+                        gap: '8px',
+                        marginBottom: '10px'
                       }}>
                         {tattoos.map((tattoo) => {
                           const isSelected = tattoo.id === selectedTattooId;
@@ -975,6 +1146,29 @@ export default function App() {
                           );
                         })}
                       </div>
+
+                      {/* Button to open quick gallery picker */}
+                      <button
+                        onClick={() => setShowGalleryModal(true)}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          borderRadius: '8px',
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          border: '1px dashed rgba(59, 130, 246, 0.4)',
+                          color: '#60a5fa',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Plus size={14} />
+                        <span>افزودن طرح از گالری</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1123,6 +1317,157 @@ export default function App() {
             </div>
 
           </div>
+
+          {/* Quick Gallery Picker Modal (while in Step 3) */}
+          {showGalleryModal && (
+            <div style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.75)',
+              backdropFilter: 'blur(8px)',
+              zIndex: 200,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+              direction: 'rtl'
+            }}
+            onClick={() => setShowGalleryModal(false)}
+            >
+              <div
+                style={{
+                  backgroundColor: '#121215',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '16px',
+                  width: '100%',
+                  maxWidth: '750px',
+                  maxHeight: '80vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.8)'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{
+                  padding: '16px 20px',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div style={{ fontWeight: '700', fontSize: '15px' }}>افزودن طرح از گالری طرح‌های تتو</div>
+                  <button
+                    onClick={() => setShowGalleryModal(false)}
+                    style={{ background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer' }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
+                    {PRESET_TATTOOS.map((preset) => {
+                      const isSelected = tattoos.some((t) => t.id === preset.id);
+                      return (
+                        <div
+                          key={preset.id}
+                          onClick={() => handleTogglePresetTattoo(preset)}
+                          style={{
+                            backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255,255,255,0.03)',
+                            border: isSelected ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '12px',
+                            padding: '10px',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            position: 'relative'
+                          }}
+                        >
+                          <div style={{
+                            aspectRatio: '1/1',
+                            backgroundColor: '#fff',
+                            borderRadius: '8px',
+                            padding: '8px',
+                            marginBottom: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <img src={getAssetUrl(`tattoos/${preset.filename}`)} alt={preset.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                          </div>
+                          <div style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {preset.name}
+                          </div>
+                          {isSelected && (
+                            <div style={{ position: 'absolute', top: '6px', left: '6px', background: '#3b82f6', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Check size={11} color="#fff" strokeWidth={3} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setShowGalleryModal(false)}
+                    style={{
+                      background: '#3b82f6',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 20px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    بستن و ادامه در استودیو
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Context menu for tattoo deletion */}
+          {contextMenu && (
+            <div
+              style={{
+                position: 'fixed',
+                top: `${contextMenu.y}px`,
+                left: `${contextMenu.x}px`,
+                backgroundColor: '#18181b',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                padding: '4px',
+                zIndex: 1000,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                direction: 'rtl'
+              }}
+            >
+              <button
+                onClick={(e) => handleDeleteTattoo(contextMenu.id, e)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'none',
+                  border: 'none',
+                  color: '#ef4444',
+                  padding: '8px 12px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                  width: '100%'
+                }}
+              >
+                <Trash2 size={14} />
+                <span>حذف طرح از بوم</span>
+              </button>
+            </div>
+          )}
+
         </div>
       )}
     </div>

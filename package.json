@@ -1,8 +1,10 @@
 {
-  "dependencies": {
-    "@react-three/drei": "^10.7.9",
-    "@react-three/fiber": "^9.8.2",
-    "lucide-react": "^1.64.0",
-    "three": "^0.186.1"
+  "name": "tattooyar-pages",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview"
   }
 }

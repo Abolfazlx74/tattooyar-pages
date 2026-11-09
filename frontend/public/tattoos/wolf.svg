@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <g fill="#18181b" stroke="#18181b" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Center forehead & bridge -->
+    <polygon points="256,60 230,120 256,150" fill="#18181b"/>
+    <polygon points="256,60 282,120 256,150" fill="#27272a"/>
+    <polygon points="256,150 220,180 256,230" fill="#09090b"/>
+    <polygon points="256,150 292,180 256,230" fill="#18181b"/>
+    <polygon points="256,230 240,280 256,310" fill="#18181b"/>
+    <polygon points="256,230 272,280 256,310" fill="#27272a"/>
+
+    <!-- Left side of face -->
+    <polygon points="230,120 180,90 220,180" fill="#27272a"/>
+    <polygon points="180,90 140,140 180,170" fill="#18181b"/>
+    <polygon points="140,140 100,200 160,210" fill="#09090b"/>
+    <polygon points="180,170 140,140 160,210" fill="#27272a"/>
+    <polygon points="220,180 180,170 160,210" fill="#18181b"/>
+    <polygon points="220,180 160,210 200,240" fill="#27272a"/>
+    <polygon points="220,180 200,240 240,240" fill="#09090b"/>
+    
+    <!-- Left Cheek & Jaw -->
+    <polygon points="160,210 110,260 170,270" fill="#18181b"/>
+    <polygon points="160,210 170,270 200,240" fill="#27272a"/>
+    <polygon points="200,240 170,270 220,290" fill="#18181b"/>
+    <polygon points="200,240 220,290 240,280" fill="#09090b"/>
+    <polygon points="170,270 130,340 190,340" fill="#27272a"/>
+    <polygon points="170,270 190,340 220,290" fill="#18181b"/>
+    <polygon points="220,290 190,340 230,360" fill="#09090b"/>
+    <polygon points="220,290 230,360 240,330" fill="#18181b"/>
+
+    <!-- Left Ear -->
+    <polygon points="180,90 160,20 220,60" fill="#18181b"/>
+    <polygon points="180,90 220,60 230,120" fill="#27272a"/>
+    <polygon points="160,20 180,90 140,100" fill="#09090b"/>
+
+    <!-- Right side of face -->
+    <polygon points="282,120 332,90 292,180" fill="#18181b"/>
+    <polygon points="332,90 372,140 332,170" fill="#27272a"/>
+    <polygon points="372,140 412,200 352,210" fill="#18181b"/>
+    <polygon points="332,170 372,140 352,210" fill="#09090b"/>
+    <polygon points="292,180 332,170 352,210" fill="#27272a"/>
+    <polygon points="292,180 352,210 312,240" fill="#18181b"/>
+    <polygon points="292,180 312,240 272,240" fill="#27272a"/>
+
+    <!-- Right Cheek & Jaw -->
+    <polygon points="352,210 402,260 342,270" fill="#27272a"/>
+    <polygon points="352,210 342,270 312,240" fill="#18181b"/>
+    <polygon points="312,240 342,270 292,290" fill="#27272a"/>
+    <polygon points="312,240 292,290 272,280" fill="#18181b"/>
+    <polygon points="342,270 382,340 322,340" fill="#18181b"/>
+    <polygon points="342,270 322,340 292,290" fill="#27272a"/>
+    <polygon points="292,290 322,340 282,360" fill="#18181b"/>
+    <polygon points="292,290 282,360 272,330" fill="#27272a"/>
+
+    <!-- Right Ear -->
+    <polygon points="332,90 352,20 292,60" fill="#27272a"/>
+    <polygon points="332,90 292,60 282,120" fill="#18181b"/>
+    <polygon points="352,20 332,90 372,100" fill="#18181b"/>
+
+    <!-- Snout & Chin -->
+    <polygon points="240,310 256,310 248,350" fill="#09090b"/>
+    <polygon points="272,310 256,310 264,350" fill="#18181b"/>
+    <polygon points="248,350 256,350 256,370" fill="#09090b"/>
+    <polygon points="264,350 256,350 256,370" fill="#18181b"/>
+    <polygon points="240,330 248,350 230,360" fill="#27272a"/>
+    <polygon points="272,330 264,350 282,360" fill="#09090b"/>
+    <polygon points="248,350 256,370 230,390" fill="#18181b"/>
+    <polygon points="264,350 256,370 282,390" fill="#27272a"/>
+    <polygon points="256,370 230,390 256,410" fill="#09090b"/>
+    <polygon points="256,370 282,390 256,410" fill="#18181b"/>
+
+    <!-- Eyes (glow / negative space) -->
+    <polygon points="205,210 235,215 220,230" fill="#fafafa"/>
+    <polygon points="307,210 277,215 292,230" fill="#fafafa"/>
+  </g>
+  <!-- Sacred geometric frame -->
+  <circle cx="256" cy="256" r="230" fill="none" stroke="#18181b" stroke-width="3" stroke-dasharray="10 6"/>
+  <polygon points="256,16 464,376 48,376" fill="none" stroke="#18181b" stroke-width="2"/>
+  <polygon points="256,496 464,136 48,136" fill="none" stroke="#18181b" stroke-width="2"/>
+</svg>

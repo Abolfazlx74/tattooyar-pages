@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <g fill="#18181b">
+    <!-- Koi Curved Body Swimming -->
+    <path d="M 280,60 C 220,60 180,120 180,190 C 180,270 240,320 280,360 C 310,390 320,430 300,470 C 340,430 330,370 290,330 C 250,290 220,240 220,190 C 220,130 250,90 280,60 Z" stroke="#18181b" stroke-width="40" stroke-linejoin="round"/>
+    
+    <!-- Head & Whisker Barbels -->
+    <path d="M 260,45 C 285,30 310,45 320,70 C 300,85 275,80 260,45 Z"/>
+    <path d="M 320,60 Q 360,50 370,75 M 310,75 Q 355,85 360,110" fill="none" stroke="#18181b" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="285" cy="55" r="4" fill="#fafafa"/>
+
+    <!-- Pectoral & Dorsal Fins -->
+    <path d="M 200,160 C 140,150 100,190 90,240 C 130,230 160,210 190,190 Z"/>
+    <path d="M 300,180 C 360,170 400,210 410,260 C 370,250 340,230 310,210 Z"/>
+
+    <!-- Split Tail Fin -->
+    <path d="M 290,460 C 260,480 230,500 210,490 C 230,465 260,460 285,450 Z"/>
+    <path d="M 305,465 C 330,495 365,510 390,495 C 365,475 335,465 315,450 Z"/>
+
+    <!-- Scales Texture Pattern -->
+    <circle cx="215" cy="205" r="8" fill="#fafafa"/>
+    <circle cx="230" cy="235" r="8" fill="#fafafa"/>
+    <circle cx="245" cy="265" r="8" fill="#fafafa"/>
+    <circle cx="265" cy="295" r="8" fill="#fafafa"/>
+  </g>
+</svg>

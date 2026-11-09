@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <g fill="#18181b">
+    <!-- Flowing Mane spikes radiating outwards -->
+    <!-- Top & sides mane -->
+    <path d="M 256,40 L 270,90 L 300,50 L 305,100 L 345,65 L 340,115 L 385,90 L 370,140 L 420,125 L 395,170 L 445,170 L 410,210 L 455,225 L 415,260 L 450,290 L 400,310 L 430,350 L 375,355 L 390,400 L 340,390 L 340,440 L 295,415 L 285,465 L 256,430 L 227,465 L 217,415 L 172,440 L 172,390 L 122,400 L 137,355 L 82,350 L 112,310 L 62,290 L 97,260 L 57,225 L 102,210 L 67,170 L 117,170 L 92,125 L 142,140 L 127,90 L 172,115 L 167,65 L 207,100 L 212,50 L 242,90 Z" fill="#18181b"/>
+
+    <!-- Inner Face contour -->
+    <path d="M 256,120 C 200,120 170,160 170,220 C 170,270 190,300 210,340 L 256,370 L 302,340 C 322,300 342,270 342,220 C 342,160 312,120 256,120 Z" fill="#fafafa"/>
+    
+    <!-- Face features in deep ink -->
+    <!-- Forehead wrinkles & geometric lines -->
+    <polygon points="256,130 250,180 262,180" fill="#18181b"/>
+    <path d="M 230,160 L 256,190 L 282,160" fill="none" stroke="#18181b" stroke-width="4"/>
+    <path d="M 220,180 L 256,215 L 292,180" fill="none" stroke="#18181b" stroke-width="4"/>
+
+    <!-- Eyes -->
+    <polygon points="205,210 240,220 210,230" fill="#18181b"/>
+    <polygon points="307,210 272,220 302,230" fill="#18181b"/>
+
+    <!-- Nose & Muzzle -->
+    <polygon points="256,285 240,260 272,260" fill="#18181b"/>
+    <path d="M 256,285 L 256,320 C 240,320 220,310 215,295 M 256,320 C 272,320 292,310 297,295" fill="none" stroke="#18181b" stroke-width="5" stroke-linecap="round"/>
+    <!-- Whisker dots -->
+    <circle cx="230" cy="305" r="2.5" fill="#18181b"/>
+    <circle cx="240" cy="312" r="2.5" fill="#18181b"/>
+    <circle cx="225" cy="315" r="2.5" fill="#18181b"/>
+    <circle cx="282" cy="305" r="2.5" fill="#18181b"/>
+    <circle cx="272" cy="312" r="2.5" fill="#18181b"/>
+    <circle cx="287" cy="315" r="2.5" fill="#18181b"/>
+    <!-- Chin beard -->
+    <polygon points="245,340 256,365 267,340" fill="#18181b"/>
+  </g>
+</svg>

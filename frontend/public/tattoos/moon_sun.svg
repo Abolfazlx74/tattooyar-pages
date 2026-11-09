@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <g fill="#18181b">
+    <!-- Sun Rays radiating around -->
+    <!-- 16 flame / triangular rays -->
+    <g stroke="#18181b" stroke-width="2">
+      <!-- 0 deg -->
+      <polygon points="256,20 248,80 264,80"/>
+      <!-- 45 deg -->
+      <polygon points="423,89 368,131 380,143"/>
+      <!-- 90 deg -->
+      <polygon points="492,256 432,248 432,264"/>
+      <!-- 135 deg -->
+      <polygon points="423,423 380,368 368,380"/>
+      <!-- 180 deg -->
+      <polygon points="256,492 264,432 248,432"/>
+      <!-- 225 deg -->
+      <polygon points="89,423 143,380 131,368"/>
+      <!-- 270 deg -->
+      <polygon points="20,256 80,264 80,248"/>
+      <!-- 315 deg -->
+      <polygon points="89,89 131,143 143,131"/>
+    </g>
+    
+    <!-- Crescent Moon profile embracing the sun face -->
+    <path d="M 256,90 C 347,90 422,165 422,256 C 422,347 347,422 256,422 C 220,422 186,410 160,390 C 220,380 265,330 265,256 C 265,182 220,132 160,122 C 186,102 220,90 256,90 Z" fill="#18181b"/>
+    <!-- Moon closed eye & face -->
+    <path d="M 230,220 Q 245,215 255,225" fill="none" stroke="#fafafa" stroke-width="4" stroke-linecap="round"/>
+    <path d="M 240,285 Q 250,290 260,285" fill="none" stroke="#fafafa" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Stars and Dots -->
+    <circle cx="340" cy="180" r="5" fill="#fafafa"/>
+    <circle cx="370" cy="220" r="7" fill="#fafafa"/>
+    <circle cx="355" cy="280" r="4" fill="#fafafa"/>
+    <circle cx="330" cy="330" r="6" fill="#fafafa"/>
+  </g>
+</svg>

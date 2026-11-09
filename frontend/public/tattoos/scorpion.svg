@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <g fill="#18181b">
+    <!-- Pincers Left -->
+    <path d="M 210,180 C 170,150 130,120 120,70 C 140,70 170,90 190,120 L 160,100 C 170,70 210,80 220,110 Z"/>
+    <!-- Pincers Right -->
+    <path d="M 302,180 C 342,150 382,120 392,70 C 372,70 342,90 322,120 L 352,100 C 342,70 302,80 292,110 Z"/>
+
+    <!-- Segmented Torso / Carapace -->
+    <ellipse cx="256" cy="210" rx="30" ry="20"/>
+    <ellipse cx="256" cy="245" rx="26" ry="14"/>
+    <ellipse cx="256" cy="272" rx="22" ry="12"/>
+    <ellipse cx="256" cy="296" rx="18" ry="10"/>
+
+    <!-- Arching Tail Segments & Venom Stinger -->
+    <ellipse cx="256" cy="324" rx="14" ry="10"/>
+    <ellipse cx="256" cy="352" rx="12" ry="10"/>
+    <ellipse cx="262" cy="380" rx="11" ry="10"/>
+    <ellipse cx="276" cy="406" rx="11" ry="10"/>
+    <ellipse cx="298" cy="426" rx="12" ry="10"/>
+    <!-- Curved Telson bulb & Stinger barb -->
+    <path d="M 315,420 C 345,410 365,370 340,350 C 320,330 290,360 315,380 C 300,365 295,335 320,310" fill="none" stroke="#18181b" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- Walking Legs (4 pairs) -->
+    <!-- Left legs -->
+    <path d="M 226,200 Q 170,190 140,220 M 226,220 Q 160,220 130,255 M 230,245 Q 160,255 135,295 M 234,270 Q 175,290 150,335" fill="none" stroke="#18181b" stroke-width="5" stroke-linecap="round"/>
+    <!-- Right legs -->
+    <path d="M 286,200 Q 342,190 372,220 M 286,220 Q 352,220 382,255 M 282,245 Q 352,255 377,295 M 278,270 Q 337,290 362,335" fill="none" stroke="#18181b" stroke-width="5" stroke-linecap="round"/>
+  </g>
+</svg>
