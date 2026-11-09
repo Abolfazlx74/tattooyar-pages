@@ -7,6 +7,24 @@ export function getAssetUrl(path) {
 
 export const PRESET_TATTOOS = [
   {
+    id: 'preset_posht',
+    name: 'ظرفیت پشت پر است، از جلو خنجر بزنید',
+    category: 'random',
+    categoryName: 'رندوم',
+    icon: '🗡️',
+    filename: 'posht.png',
+    desc: 'نوشته تتو فارسی با فونت فوق‌العاده بولد و خوانا'
+  },
+  {
+    id: 'preset_madar',
+    name: 'رفیق بیکلک مادر',
+    category: 'random',
+    categoryName: 'رندوم',
+    icon: '❤️',
+    filename: 'madar.png',
+    desc: 'تتو نوشته اصیل و ماندگار با خط بولد و نشان قلب'
+  },
+  {
     id: 'preset_wolf',
     name: 'گرگ هندسی (Geometric Wolf)',
     category: 'geometric',
@@ -154,6 +172,7 @@ export const PRESET_TATTOOS = [
 
 export const TATTOO_CATEGORIES = [
   { id: 'all', label: 'همه طرح‌ها' },
+  { id: 'random', label: 'رندوم (Random)' },
   { id: 'geometric', label: 'هندسی و مدرن' },
   { id: 'dark', label: 'دارک و گوتیک' },
   { id: 'myth', label: 'اساطیری و ژاپنی' },

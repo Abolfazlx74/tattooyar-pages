@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <style>
+      .bold-persian {
+        font-family: 'Segoe UI', Tahoma, -apple-system, sans-serif;
+        font-weight: 900;
+        fill: #18181b;
+        text-anchor: middle;
+        direction: rtl;
+      }
+    </style>
+  </defs>
+
+  <!-- Top crown/heart wing accent -->
+  <g fill="#18181b">
+    <!-- Stylized heart -->
+    <path d="M 256,160 C 250,140 230,135 220,150 C 210,165 220,180 256,205 C 292,180 302,165 292,150 C 282,135 262,140 256,160 Z"/>
+    <!-- Wings/flourish sides -->
+    <path d="M 210,165 Q 160,150 130,170 Q 170,175 205,178 Z"/>
+    <path d="M 302,165 Q 352,150 382,170 Q 342,175 307,178 Z"/>
+  </g>
+
+  <!-- Main text lines -->
+  <text x="256" y="260" class="bold-persian" font-size="38" letter-spacing="-0.5px">رفیق بیکلک</text>
+  <text x="256" y="335" class="bold-persian" font-size="54" letter-spacing="1px">مـادر</text>
+
+  <!-- Bottom decorative flourish -->
+  <g fill="none" stroke="#18181b" stroke-width="3" stroke-linecap="round">
+    <path d="M 150,370 C 200,385 240,360 256,380 C 272,360 312,385 362,370"/>
+    <circle cx="256" cy="380" r="3" fill="#18181b"/>
+  </g>
+</svg>
