@@ -1,14 +1,110 @@
+/* Universal reset & mobile optimization */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body, html, #root {
   width: 100%;
   height: 100%;
-  background-color: #121214;
-  color: #ffffff;
+  height: 100dvh; /* Dynamic viewport height for mobile */
+  background-color: #09090b;
+  color: #f4f4f5;
   overflow: hidden;
+  position: fixed;
+  inset: 0;
+}
+
+/* Custom smooth dark scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Master scrollable container for steps */
+.scrollable-page {
+  flex: 1 1 0%;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}
+
+/* Horizontal pill bar (categories) */
+.horizontal-scroll-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scrollbar-width: none;
+}
+.horizontal-scroll-bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Grid for Step 1 */
+.body-part-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+/* Grid for Step 2 (Tattoo gallery) */
+.tattoo-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+/* Mobile landscape adjustments (screens with height <= 560px) */
+@media (max-height: 560px) {
+  .body-part-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .tattoo-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .app-header {
+    height: 42px !important;
+    padding: 0 12px !important;
+  }
+  .app-header-title {
+    font-size: 14px !important;
+  }
+  .app-step-btn {
+    padding: 3px 8px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* Small screens in width <= 680px */
+@media (max-width: 680px) {
+  .body-part-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .tattoo-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+    gap: 8px !important;
+  }
 }
