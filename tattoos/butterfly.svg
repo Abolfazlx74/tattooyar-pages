@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <g fill="#18181b" stroke="#fafafa" stroke-width="2">
+    <!-- Upper Wings Left -->
+    <path d="M 256,230 C 230,160 140,80 50,110 C 20,130 15,180 40,230 C 70,280 150,290 240,260 Z" fill="#18181b"/>
+    <!-- Wing pattern left -->
+    <circle cx="100" cy="180" r="24" fill="#09090b"/>
+    <circle cx="100" cy="180" r="14" fill="#fafafa"/>
+    <path d="M 70,140 Q 150,180 210,230" fill="none" stroke="#fafafa" stroke-width="3"/>
+    <path d="M 50,190 Q 130,220 190,250" fill="none" stroke="#fafafa" stroke-width="3"/>
+
+    <!-- Upper Wings Right -->
+    <path d="M 256,230 C 282,160 372,80 462,110 C 492,130 497,180 472,230 C 442,280 362,290 272,260 Z" fill="#18181b"/>
+    <!-- Wing pattern right -->
+    <circle cx="412" cy="180" r="24" fill="#09090b"/>
+    <circle cx="412" cy="180" r="14" fill="#fafafa"/>
+    <path d="M 442,140 Q 362,180 302,230" fill="none" stroke="#fafafa" stroke-width="3"/>
+    <path d="M 462,190 Q 382,220 322,250" fill="none" stroke="#fafafa" stroke-width="3"/>
+
+    <!-- Lower Wings Left -->
+    <path d="M 245,265 C 190,290 120,320 130,390 C 140,430 190,440 220,400 C 240,370 245,320 245,265 Z" fill="#27272a"/>
+    <circle cx="175" cy="370" r="12" fill="#fafafa"/>
+
+    <!-- Lower Wings Right -->
+    <path d="M 267,265 C 322,290 392,320 382,390 C 372,430 322,440 292,400 C 272,370 267,320 267,265 Z" fill="#27272a"/>
+    <circle cx="337" cy="370" r="12" fill="#fafafa"/>
+
+    <!-- Moth Body & Death Skull Thorax -->
+    <ellipse cx="256" cy="310" rx="14" ry="70" fill="#09090b"/>
+    <!-- Skull on thorax -->
+    <circle cx="256" cy="225" r="16" fill="#fafafa"/>
+    <circle cx="251" cy="222" r="3" fill="#18181b"/>
+    <circle cx="261" cy="222" r="3" fill="#18181b"/>
+    <polygon points="256,226 253,232 259,232" fill="#18181b"/>
+    <!-- Antennae -->
+    <path d="M 252,210 Q 230,160 190,150 M 260,210 Q 282,160 322,150" fill="none" stroke="#18181b" stroke-width="3"/>
+  </g>
+  <!-- Moon crescent above -->
+  <path d="M 256,30 C 280,30 300,50 300,74 C 300,98 280,118 256,118 C 270,105 275,85 270,65 C 265,48 256,38 256,30 Z" fill="#18181b"/>
+</svg>
